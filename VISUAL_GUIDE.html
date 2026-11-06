@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Visual Guide & Architecture Dashboard</title>
+  <!-- Auto-renders Mermaid flowcharts in the browser -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --success: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    h1 { font-size: 1.75rem; color: var(--accent); }
+    .subtitle { color: var(--muted); font-size: 0.95rem; margin-top: 4px; }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .card-title { font-size: 1.15rem; font-weight: 700; color: #fff; }
+    .badge {
+      font-size: 0.78rem;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .badge-human { background: rgba(56, 189, 248, 0.2); color: var(--accent); }
+    .badge-agent { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+    .badge-trap { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .summary {
+      color: var(--accent);
+      font-weight: 500;
+      margin-bottom: 12px;
+      padding-left: 10px;
+      border-left: 3px solid var(--accent);
+    }
+    .anchor {
+      font-family: monospace;
+      font-size: 0.85rem;
+      background: #090d16;
+      padding: 6px 10px;
+      border-radius: 6px;
+      color: var(--muted);
+      margin-top: 10px;
+      display: inline-block;
+    }
+    .mermaid-box {
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 12px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <!-- AI AGENT: Replace Project Title & 1-Line Vision Below -->
+    <h1>Project Visual Dashboard</h1>
+    <p class="subtitle">Plain-English visual map of User Intentions, System Architecture, Decisions, and Landmines.</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('intent', this)">1. My Intent & Features</button>
+    <button class="tab-btn" onclick="showTab('arch', this)">2. Visual Architecture</button>
+    <button class="tab-btn" onclick="showTab('decisions', this)">3. Decisions & What Failed</button>
+    <button class="tab-btn" onclick="showTab('traps', this)">4. Landmines (Do Not Touch)</button>
+  </div>
+
+  <!-- TAB 1: FEATURES & INTENT -->
+  <section id="intent" class="tab-panel active">
+    <!-- AI AGENT: Repeat this .card block for every [FEATURE] and [WISHLIST] in PRODUCT.md -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">[FEATURE: Example-Feature-Name]</span>
+        <span class="badge badge-agent">Active Feature</span>
+      </div>
+      <div class="summary">1-Line Summary: Plain-English description of what this feature does for the user.</div>
+      <p><strong>User Intention:</strong> Why this exists and how it must behave visually.</p>
+      <div class="anchor">Code Anchor: path/to/file.ts &rarr; functionName</div>
+    </div>
+  </section>
+
+  <!-- TAB 2: ARCHITECTURE -->
+  <section id="arch" class="tab-panel">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">System Flow & Architecture Map</span>
+      </div>
+      <div class="summary">How the main parts of the application talk to each other.</div>
+      <div class="mermaid-box">
+        <!-- AI AGENT: Paste the Mermaid flowchart from ARCHITECTURE.md here -->
+        <pre class="mermaid">
+flowchart LR
+    UI[User Interface] --> Store[(State Store)]
+    Store --> Engine[Core Logic / Renderer]
+        </pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 3: DECISIONS & PIVOTS -->
+  <section id="decisions" class="tab-panel">
+    <!-- AI AGENT: Repeat this .card block for every [DECISION] in DECISIONS_AND_TRAPS.md -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">[DECISION: Example-Architectural-Choice]</span>
+        <span class="badge badge-human">DECIDED BY: HUMAN</span>
+      </div>
+      <div class="summary">1-Line Summary: What we chose to do and what failed approach it replaced.</div>
+      <p><strong>Why We Pivoted:</strong> Plain-English explanation of what we tried first, why it failed, and why the current approach works.</p>
+      <div class="mermaid-box">
+        <pre class="mermaid">
+flowchart LR
+    subgraph Failed["❌ What We Tried (Failed)"]
+        A[Old Method] --> B[Why It Broke]
+    end
+    subgraph Active["✅ Current Solution (Works)"]
+        C[New Method] --> D[Result]
+    end
+        </pre>
+      </div>
+      <div class="anchor">Code Anchor: path/to/file.ts &rarr; functionName</div>
+    </div>
+  </section>
+
+  <!-- TAB 4: LANDMINES / TRAPS -->
+  <section id="traps" class="tab-panel">
+    <!-- AI AGENT: Repeat this .card block for every [TRAP] in DECISIONS_AND_TRAPS.md -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">[TRAP: Example-Landmine-Name]</span>
+        <span class="badge badge-trap">DO NOT TOUCH</span>
+      </div>
+      <div class="summary">Strict Rule: Never change or move this specific code setup.</div>
+      <p><strong>What Breaks If You Touch It:</strong> Plain-English explanation of the hidden bug that will return if an AI modifies this.</p>
+      <div class="anchor">Protected Anchor: path/to/file.ts &rarr; protectedFunctionName</div>
+    </div>
+  </section>
+
+  <script>
+    function showTab(id, btn) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>
