@@ -2,7 +2,6 @@
 **MANDATORY FOR ALL AI CODING AGENTS**
 
 ## 1. User Profile, Agency & Voice-Dictation Decoder
-- **Non-Coder Product Architect:** The user is the architect and decision-maker, not a programmer. Never display raw code diffs or code blocks when explaining plans, previews, or options. Communicate using plain English, Mermaid diagrams, tables, or visual HTML/SVG previews.
 - **High-Level Agency:** Operate with autonomous engineering judgment. Rely on high-level intent, architecture, and desired outcomes rather than waiting for micromanaged step-by-step CLI instructions.
 - **South Asian Voice-Dictation Input:** Prompts are voice-typed by a South Asian English speaker. Expect phonetic mishearings, nasalized sound substitutions, repeated words, fillers, and fragmented phrasing. Silently ignore fillers and auto-correct likely mishearings from project context.
 
@@ -14,7 +13,7 @@ Before modifying files, triage the prompt into one of three paths:
   - **`[2] Clarifications / Options (if needed):`** Concrete choices labeled `[2A]`, `[2B]`, `[2C]` with brief plain-English trade-offs.
   - **`[3] Planned Impact:`** Bullet list of user-visible features or files affected.
   - **Wait:** Stop and wait for approval before executing.
-- **Path C: Visual Preview Path (On Request):** When the user asks for an example, preview, or how a change will look. Never preview raw code:
+- **Path C: Visual Preview Path (On Request):** When the user asks for an example, preview, or how a change will look:
   - **UI/UX Changes:** Generate a self-contained HTML/SVG visual mock or wireframe showing Before vs. After.
   - **Logic/Flow Changes:** Render a Mermaid flowchart of the user or data flow.
   - **File/System Operations:** Present a Before -> After Action Table (Target | Action | Outcome).
@@ -44,10 +43,12 @@ After completing any feature, architectural change, or significant fix:
 3. **Commit & Push:** Commit clean source and documentation changes and push to the project's `https://github.com/Mostakim2005` repository.
 4. **Report:** Summarize the commit hash/status, plain-English rationale, modified file/function anchors, and verification results.
 
-## 6. Live Preference Capture & Master Sync Protocol
-- **Auto-Capture:** Whenever the user states a new recurring workflow rule, preference, or design constraint, append it to **Section 7** below as:
-  `- [PREF: Descriptive-Slug | YYYY-MM-DD | Category] Plain-English rule.`
-- **Cross-Project Sync & Consolidation:** When instructed, sync new Section 7 entries from local project workspaces back into both `C:\Users\kazir\.agent-templates\AGENTS.md` and the master `agent-templates` repository on `https://github.com/Mostakim2005`, or deduplicate and promote accumulated Section 7 entries into Sections 1–5.
+## 6. Dynamic Preference Routing & Master Sync Protocol
+- **Semantic Scope Analysis (No Hardcoded Triggers):** When instructed to update `AGENTS.md` or when a new preference or way of doing things is stated, dynamically analyze the semantic scope rather than relying on keywords or rigid persona rules:
+  - **Project-Specific (Local `./AGENTS.md`):** If the rule is coupled to this project's specific tech stack, local libraries, build scripts, directory layout, or domain business logic, record it into the project root `./AGENTS.md`.
+  - **Universal / Cross-Project (Master `AGENTS.md`):** If the rule represents a general coding standard, workflow discipline, tool behavior, or universal preference applying across multiple codebases, record it into master `C:\Users\kazir\.agent-templates\AGENTS.md` Section 7 as `- [PREF: Descriptive-Slug | YYYY-MM-DD | Category] Plain-English rule.` (the background watcher will automatically replicate it across all harnesses and push to GitHub).
+  - **Ambiguous / Borderline:** Record into the project's `./AGENTS.md` first, then offer a quick 1-line confirmation: *"Recorded in project AGENTS.md. Promote to global master AGENTS.md?"*
+- **Cross-Project Consolidation:** When instructed, consolidate accumulated Section 7 entries into Sections 1–5 across local and master repositories.
 
 ## 7. Live User Preferences (Auto-Captured)
 *(All preferences up to 2026-11-06 have been consolidated into Sections 1–6. Append newly discovered preferences below.)*
