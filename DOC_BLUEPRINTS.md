@@ -44,3 +44,30 @@
 > **1-Line Summary:** [What we plan to build or merge from another app next.]
 * **User Intention:** [Desired outcome]
 * **Target Integration Point:** [Which existing subsystem it will connect to]
+---
+
+## Template 5: Project-Specific `AGENTS.md` (Repository Facts Only)
+> **1-Line Summary:** Local repository instructions defining build commands, local architecture, and unique traps without duplicating the master protocol.
+
+``markdown
+# Project Operating Instructions (`AGENTS.md`)
+> **Notice:** This project inherits user persona, confirmation gates, and documentation blueprints from the global master `AGENTS.md`. Do not duplicate those rules here.
+
+## 1. Project Tech Stack & Environment
+* **Runtime / Language:** [e.g., Node.js v20+, TypeScript 5+, Electron 30]
+* **Framework / Host:** [e.g., Vue 3 + Tailwind CSS]
+* **Target OS / Build Output:** [e.g., Windows x64 portable .exe]
+
+## 2. Mandatory Verification & Build Commands
+* **Type Check:** `npm run typecheck`
+* **Lint:** `npm run lint`
+* **Test Suite:** `npm test`
+* **Build / Package:** `npm run build`
+
+## 3. Repository Directory Structure & Conventions
+* `src/` - Modular source files. Single-responsibility modules only.
+* `docs/` - Core documentation suite (PRODUCT.md, ARCHITECTURE.md, DECISIONS_AND_TRAPS.md, VISUAL_GUIDE.html).
+
+## 4. Repository-Specific Engineering Traps
+* **TRAP 1:** [State specific gotchas unique to this codebase]
+``
