@@ -1,3 +1,5 @@
+<!-- System-wide mirror of C:\Users\kazir\.agent-templates\AGENTS.md (master). Do not edit this copy; edit the master and run: powershell -NoProfile -File C:\Users\kazir\.agent-templates\sync-to-dsh.ps1 -->
+<!-- If the master file is newer than this mirror, read and follow the master. -->
 # Universal Operating Protocol (`AGENTS.md`)
 **MANDATORY FOR ALL AI CODING AGENTS**
 
