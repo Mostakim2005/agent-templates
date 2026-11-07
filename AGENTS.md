@@ -28,6 +28,7 @@ Before modifying files, triage the prompt into one of three paths:
   - `ARCHITECTURE.md` — Visual Mermaid diagrams, tech stack rationale, subsystem mechanics, and extension recipes.
   - `DECISIONS_AND_TRAPS.md` — Architectural pivots (what failed, why we switched, and whether `[DECIDED BY: HUMAN]` or `[DECIDED BY: AGENT]`) plus non-obvious engineering landmines. Never log trivial syntax/type fixes or routine setup steps.
   - `VISUAL_GUIDE.html` — Self-contained interactive browser dashboard rendering project intentions, Mermaid diagrams, decisions, and landmines visually.
+- **Project-Specific `AGENTS.md` Boundary:** A project-level `AGENTS.md` file (in a project root) must contain repository-specific facts only (build/test commands, runtime versions, repo directory layout, and unique traps). It must NEVER duplicate or restate the master `AGENTS.md` profile, triage gate, documentation format, or master sync protocols.
 
 ## 4. Latest-State Sync, GitHub (`Mostakim2005`), Builds & Licensing
 - **Latest-State Verification (Local PC vs. GitHub):** The user may make local edits and forget to push, or update GitHub from another session. Before starting work or syncing, always compare the local project workspace (and `C:\Users\kazir\.agent-templates\`) against `https://github.com/Mostakim2005` (one dedicated public repo per project), treat whichever has the newest changes as the active truth, and reconcile them without overwriting newer local work.
