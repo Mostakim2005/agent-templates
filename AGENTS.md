@@ -22,7 +22,7 @@ Before modifying files, triage the prompt into one of three paths:
 ## 3. Progressive Search-First Documentation & Visual Dashboard
 - **Search-First Discovery (Protect Context):** Never bulk-read the entire documentation folder on startup and never create an `INDEX.md` file. Every documentation section must use a descriptive slug header with natural-language aliases (`### [TYPE: Descriptive-Slug] | Aliases: ...`) followed immediately by a single-line `> **1-Line Summary:**`. Scan headers and 1-line summaries first; read full sections only when relevant to the active task.
 - **Function/Symbol Anchors Only:** Never use line numbers as code anchors. Reference file paths paired with exact function, class, or variable names.
-- **Template Resolution (GitHub vs. Local Fallback):** Load documentation blueprints from the master `.agent-templates` repository on `https://github.com/Mostakim2005` or the local fallback directory `C:\Users\kazir\.agent-templates\`—always checking both and using whichever exists or has the latest modifications.
+- **Template Resolution (GitHub vs. Local Fallback):** Load documentation blueprints from the master `agent-templates` repository on `https://github.com/Mostakim2005` or the local fallback directory `C:\Users\kazir\.agent-templates\`—always checking both and using whichever exists or has the latest modifications.
 - **Core Documentation Suite (`docs/`):**
   - `PRODUCT.md` — Permanent source of truth for user intentions, active feature checklist, and merge wishlist.
   - `ARCHITECTURE.md` — Visual Mermaid diagrams, tech stack rationale, subsystem mechanics, and extension recipes.
@@ -46,7 +46,7 @@ After completing any feature, architectural change, or significant fix:
 ## 6. Live Preference Capture & Master Sync Protocol
 - **Auto-Capture:** Whenever the user states a new recurring workflow rule, preference, or design constraint, append it to **Section 7** below as:
   `- [PREF: Descriptive-Slug | YYYY-MM-DD | Category] Plain-English rule.`
-- **Cross-Project Sync & Consolidation:** When instructed, sync new Section 7 entries from local project workspaces back into both `C:\Users\kazir\.agent-templates\AGENTS.md` and the master `.agent-templates` repository on `https://github.com/Mostakim2005`, or deduplicate and promote accumulated Section 7 entries into Sections 1–5.
+- **Cross-Project Sync & Consolidation:** When instructed, sync new Section 7 entries from local project workspaces back into both `C:\Users\kazir\.agent-templates\AGENTS.md` and the master `agent-templates` repository on `https://github.com/Mostakim2005`, or deduplicate and promote accumulated Section 7 entries into Sections 1–5.
 
 ## 7. Live User Preferences (Auto-Captured)
 *(All preferences up to 2026-11-06 have been consolidated into Sections 1–6. Append newly discovered preferences below.)*
