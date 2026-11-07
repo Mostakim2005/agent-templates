@@ -72,7 +72,8 @@ $changed = $false
 if ($newestHarnessName) {
     Write-Host "[SYNC] Target '$newestHarnessName' has newer changes than Master. Promoting to Master..." -ForegroundColor Cyan
     $sourceContent = [System.IO.File]::ReadAllText($newestHarnessPath, [System.Text.Encoding]::UTF8)
-    [System.IO.File]::WriteAllText($masterPath, $sourceContent, $utf8NoBom)
+    $sourceContent = $sourceContent -replace '<!--[\s\S]*?-->\r?\n?', ''
+    [System.IO.File]::WriteAllText($masterPath, $sourceContent.TrimStart(), $utf8NoBom)
     $masterHash = Get-TextHash $masterPath
     $sourceOfTruth = "$newestHarnessName ($newestHarnessPath)"
     $changed = $true
