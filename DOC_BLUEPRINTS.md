@@ -66,7 +66,7 @@
 
 ## 3. Repository Directory Structure & Conventions
 * `src/` - Modular source files. Single-responsibility modules only.
-* `docs/` - Core documentation suite (PRODUCT.md, ARCHITECTURE.md, DECISIONS_AND_TRAPS.md, VISUAL_GUIDE.html).
+* `docs/` - Core documentation suite (PRODUCT.md, ARCHITECTURE.md, DECISIONS_AND_TRAPS.md).
 
 ## 4. Repository-Specific Engineering Traps
 * **TRAP 1:** [State specific gotchas unique to this codebase]

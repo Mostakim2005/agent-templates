@@ -18,15 +18,14 @@ Before modifying files, triage the prompt into one of three paths:
   - **Logic/Flow Changes:** Render a Mermaid flowchart of the user or data flow.
   - **File/System Operations:** Present a Before -> After Action Table (Target | Action | Outcome).
 
-## 3. Progressive Search-First Documentation & Visual Dashboard
+## 3. Progressive Search-First Documentation & Markdown Visuals
 - **Search-First Discovery (Protect Context):** Never bulk-read the entire documentation folder on startup and never create an `INDEX.md` file. Every documentation section must use a descriptive slug header with natural-language aliases (`### [TYPE: Descriptive-Slug] | Aliases: ...`) followed immediately by a single-line `> **1-Line Summary:**`. Scan headers and 1-line summaries first; read full sections only when relevant to the active task.
 - **Function/Symbol Anchors Only:** Never use line numbers as code anchors. Reference file paths paired with exact function, class, or variable names.
 - **Template Resolution (GitHub vs. Local Fallback):** Load documentation blueprints from the master `agent-templates` repository on `https://github.com/Mostakim2005` or the local fallback directory `C:\Users\kazir\.agent-templates\`—always checking both and using whichever exists or has the latest modifications.
 - **Core Documentation Suite (`docs/`):**
   - `PRODUCT.md` — Permanent source of truth for user intentions, active feature checklist, and merge wishlist.
-  - `ARCHITECTURE.md` — Visual Mermaid diagrams, tech stack rationale, subsystem mechanics, and extension recipes.
-  - `DECISIONS_AND_TRAPS.md` — Architectural pivots (what failed, why we switched, and whether `[DECIDED BY: HUMAN]` or `[DECIDED BY: AGENT]`) plus non-obvious engineering landmines. Never log trivial syntax/type fixes or routine setup steps.
-  - `VISUAL_GUIDE.html` — Self-contained interactive browser dashboard rendering project intentions, Mermaid diagrams, decisions, and landmines visually.
+  - `ARCHITECTURE.md` — Visual Mermaid diagrams (rendered natively in GitHub and Obsidian), tech stack rationale, subsystem mechanics, and extension recipes.
+  - `DECISIONS_AND_TRAPS.md` — Architectural pivots (what failed, why we switched, and whether `[DECIDED BY: HUMAN]` or `[DECIDED BY: AGENT]`) plus non-obvious engineering landmines, incorporating inline Mermaid comparisons. Never log trivial syntax/type fixes or routine setup steps.
 - **Project-Specific `AGENTS.md` Boundary:** A project-level `AGENTS.md` file (in a project root) must contain repository-specific facts only (build/test commands, runtime versions, repo directory layout, and unique traps). It must NEVER duplicate or restate the master `AGENTS.md` profile, triage gate, documentation format, or master sync protocols.
 
 ## 4. Latest-State Sync, GitHub (`Mostakim2005`), Builds & Licensing
@@ -40,7 +39,7 @@ Before modifying files, triage the prompt into one of three paths:
 ## 5. Mandatory Post-Change Protocol
 After completing any feature, architectural change, or significant fix:
 1. **Verify:** Run the project's automated build, type, lint, and verification checks.
-2. **Sync Docs:** Update `PRODUCT.md`, `ARCHITECTURE.md`, `DECISIONS_AND_TRAPS.md`, and `VISUAL_GUIDE.html` whenever intent, architecture, or traps change.
+2. **Sync Docs:** Update `PRODUCT.md`, `ARCHITECTURE.md`, and `DECISIONS_AND_TRAPS.md` whenever intent, architecture, or traps change (maintaining inline Mermaid diagrams for native visual rendering in Obsidian and GitHub).
 3. **Commit & Push:** Commit clean source and documentation changes and push to the project's `https://github.com/Mostakim2005` repository.
 4. **Report:** Summarize the commit hash/status, plain-English rationale, modified file/function anchors, and verification results.
 
@@ -55,3 +54,4 @@ After completing any feature, architectural change, or significant fix:
 *(All preferences up to 2026-11-06 have been consolidated into Sections 1–6. Append newly discovered preferences below.)*
 - [PREF: Repo-And-Workspace-Naming-Convention | 2026-11-07 | Workflow] Standardize GitHub repositories to lowercase kebab-case and local working directories to Title Case with spaces; upstream forks must strictly retain their exact upstream names to facilitate seamless upstream code merges.
 - [PREF: On-Demand-Sync-Architecture | 2026-11-07 | Workflow] All syncing workflows (including master AGENTS.md multi-harness replication and Novel Writing repository git/mirror updates) operate strictly on-demand via direct script execution or agent invocation (powershell sync scripts), eliminating background watchers, polling daemons, and scheduled tasks to avoid console pop-ups, CPU spikes, or phantom process alerts.
+- [PREF: Markdown-Native-Visual-Docs | 2026-11-07 | Documentation] Standardize documentation strictly to Markdown (PRODUCT.md, ARCHITECTURE.md, DECISIONS_AND_TRAPS.md) with native inline Mermaid diagrams, completely deprecating and removing VISUAL_GUIDE.html to eliminate redundant HTML maintenance and token consumption.

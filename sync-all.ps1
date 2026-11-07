@@ -107,7 +107,7 @@ if (-not $NoGitPush) {
     $gitStatus = git -C $TemplatesDir status --porcelain
     if ($gitStatus) {
         Write-Host "[GIT] Committing and pushing changes to GitHub..." -ForegroundColor Yellow
-        git -C $TemplatesDir add AGENTS.md sync-all.ps1 sync-to-antigravity.ps1 sync-to-dsh.ps1
+        git -C $TemplatesDir add -A
         $commitMsg = if ($newestHarnessName) {
             "chore(agents): auto-sync AGENTS.md updates from $newestHarnessName"
         } else {
