@@ -10,6 +10,7 @@
   4. OpenCode          : C:\Users\kazir\.config\opencode\AGENTS.md
   5. Command Code      : C:\Users\kazir\.commandcode\AGENTS.md
   6. Claude Code       : C:\Users\kazir\.claude\CLAUDE.md
+  7. Codex             : C:\Users\kazir\.codex\AGENTS.md
 
   Two-Way Sync Logic:
   - Compares timestamps and SHA256 hashes across all targets.
@@ -37,6 +38,7 @@ $harnesses = [ordered]@{
     'OpenCode'          = (Join-Path $env:USERPROFILE '.config\opencode\AGENTS.md')
     'CommandCode'       = (Join-Path $env:USERPROFILE '.commandcode\AGENTS.md')
     'ClaudeCode'        = (Join-Path $env:USERPROFILE '.claude\CLAUDE.md')
+    'Codex'             = (Join-Path $env:USERPROFILE '.codex\AGENTS.md')
 }
 
 function Get-TextHash([string]$path) {
@@ -121,4 +123,4 @@ if (-not $NoGitPush) {
     }
 }
 
-Write-Host "[DONE] All 5 agent harnesses + Master are fully in sync!" -ForegroundColor Green
+Write-Host "[DONE] All 6 agent harnesses + Master are fully in sync!" -ForegroundColor Green
