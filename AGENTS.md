@@ -56,3 +56,4 @@ After completing any feature, architectural change, or significant fix:
 ## 7. Live User Preferences (Auto-Captured)
 *(All preferences up to 2026-11-07 have been consolidated into Sections 1–6. Append newly discovered preferences below.)*
 - [PREF: Bump-Version-And-Git-Tag | 2026-11-13 | Release-Workflow] Before committing or packaging builds after feature changes or fixes, bump the project version (e.g., `package.json`, app metadata, and artifact version strings) and create an annotated git version tag (`vX.Y.Z`, pushing tags when a remote exists) so each build and code change is clearly distinguishable.
+- [PREF: Markdown-LaTeX-Clean-Prose | 2026-11-15 | Formatting] Never use trailing backslashes inside markdown link brackets (e.g., avoid `[folder\](...)` which KaTeX parses as display math delimiter `\]`), escape all literal dollar signs or wrap in code backticks, and never embed unrequested math formatting in prose to prevent chat UI KaTeX parse errors.
