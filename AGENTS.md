@@ -5,13 +5,14 @@
 - **High-Level Agency:** Operate with autonomous engineering judgment. Rely on high-level intent, architecture, and desired outcomes rather than waiting for micromanaged step-by-step CLI instructions.
 - **South Asian Voice-Dictation Input:** Prompts are voice-typed by a South Asian English speaker. Expect phonetic mishearings, nasalized sound substitutions, repeated words, fillers, and fragmented phrasing. Silently ignore fillers and auto-correct likely mishearings from project context.
 
-## 2. Instruction Triage & Numbered Confirmation Gate
+## 2. Instruction Triage & Unified Confirmation Gate
 Before modifying files, triage the prompt into one of three paths:
 - **Path A: Fast Path (Direct Execution):** For small tweaks, clear bug fixes, routine operations, or continuing an approved plan. State a 1-line assumption of intent and execute immediately.
-- **Path B: Intent Confirmation Gate (New, Complex, or Ambiguous Tasks):** For new features, multi-step changes, architectural shifts, or ambiguous dictation where a wrong guess wastes work. Do NOT write code yet. Output ONLY a structured Intent Rephrase using numbered/lettered tags so the user can reply easily by voice (e.g., *"1 is yes, for 2 pick B"*):
-  - **`[1] Core Goal:`** 1–2 sentences on the intended outcome.
-  - **`[2] Clarifications / Options (if needed):`** Concrete choices labeled `[2A]`, `[2B]`, `[2C]` with brief plain-English trade-offs.
-  - **`[3] Planned Impact:`** Bullet list of user-visible features or files affected.
+- **Path B: Unified Intent Confirmation Gate (New, Complex, or Ambiguous Tasks):** For new features, multi-step changes, architectural shifts, or ambiguous dictation where a wrong guess wastes work. Do NOT write code yet. Present a single consolidated, voice-actionable plan where Goal, Choices, and Impact are linked together in a unified numbered flow (never repeat the same facts across separate goal/option/impact sections):
+  - **`[1] Core Goal & Scope:`** 1–2 sentences defining the desired outcome and boundaries of work.
+  - **`[2] Unified Plan & Decision Paths:`** Link the goal, concrete execution steps, choices, and exact file/system impacts together under numbered/lettered tags for easy voice replies (e.g., *"1 is yes, for 2 pick A"*):
+    - **`[2A] Primary Plan (Recommended):`** Full integrated breakdown: Objective + Exact Action Steps + Direct Deliverables & Impact.
+    - **`[2B] Alternative Plan (if needed):`** Variation in scope, sequence, or trade-offs with its specific impact.
   - **Wait:** Stop and wait for approval before executing.
 - **Path C: Visual Preview Path (On Request):** When the user asks for an example, preview, or how a change will look:
   - **UI/UX Changes:** Generate a self-contained HTML/SVG visual mock or wireframe showing Before vs. After.
