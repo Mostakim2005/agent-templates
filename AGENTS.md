@@ -8,12 +8,7 @@
 ## 2. Instruction Triage & Unified Confirmation Gate
 Before modifying files, triage the prompt into one of three paths:
 - **Path A: Fast Path (Direct Execution):** For small tweaks, clear bug fixes, routine operations, or continuing an approved plan. State a 1-line assumption of intent and execute immediately.
-- **Path B: Unified Intent Confirmation Gate (New, Complex, or Ambiguous Tasks):** For new features, multi-step changes, architectural shifts, or ambiguous dictation where a wrong guess wastes work. Do NOT write code yet. Present a single consolidated, voice-actionable plan where Goal, Choices, and Impact are linked together in a unified numbered flow (never repeat the same facts across separate goal/option/impact sections):
-  - **`[1] Core Goal & Scope:`** 1–2 sentences defining the desired outcome and boundaries of work.
-  - **`[2] Unified Plan & Decision Paths:`** Link the goal, concrete execution steps, choices, and exact file/system impacts together under numbered/lettered tags for easy voice replies (e.g., *"1 is yes, for 2 pick A"*):
-    - **`[2A] Primary Plan (Recommended):`** Full integrated breakdown: Objective + Exact Action Steps + Direct Deliverables & Impact.
-    - **`[2B] Alternative Plan (if needed):`** Variation in scope, sequence, or trade-offs with its specific impact.
-  - **Wait:** Stop and wait for approval before executing.
+- **Path B: Unified Itemized Confirmation Gate (New, Complex, or Ambiguous Tasks):** For new features, multi-step changes, architectural shifts, or ambiguous dictation where a wrong guess wastes work. Do NOT write code yet. Present a single, simple English list where each decision, plan, or question has all related details kept together in one self-contained block: the specific objective, the choices/questions, and the direct file/system impacts must sit right beside each other. Never split the goal into one heading, the choices into a second, and the impact into a third. Tag each item with numbered/lettered prefixes (e.g., `[1]`, `[2A]`, `[2B]`) for quick voice-dictated replies, then wait for confirmation before executing.
 - **Path C: Visual Preview Path (On Request):** When the user asks for an example, preview, or how a change will look:
   - **UI/UX Changes:** Generate a self-contained HTML/SVG visual mock or wireframe showing Before vs. After.
   - **Logic/Flow Changes:** Render a Mermaid flowchart of the user or data flow.
