@@ -5,12 +5,13 @@
 .DESCRIPTION
   Synchronizes AGENTS.md across:
   1. Master Repository : C:\Users\kazir\.agent-templates\AGENTS.md
-  2. Antigravity       : C:\Users\kazir\.gemini\config\plugins\topic-manager\rules\AGENTS.md
+  2. Antigravity       : C:\Users\kazir\.gemini\AGENTS.md
   3. DeepSeek Harness  : C:\Users\kazir\.dsh\AGENTS.md
   4. OpenCode          : C:\Users\kazir\.config\opencode\AGENTS.md
   5. Command Code      : C:\Users\kazir\.commandcode\AGENTS.md
   6. Claude Code       : C:\Users\kazir\.claude\CLAUDE.md
-  7. Codex             : C:\Users\kazir\.codex\AGENTS.md
+  7. Codex / ChatGPT   : C:\Users\kazir\.codex\AGENTS.md
+  8. Freebuff          : C:\Users\kazir\.AGENTS.md
 
   Two-Way Sync Logic:
   - Compares timestamps and SHA256 hashes across all targets.
@@ -33,12 +34,13 @@ if (-not (Test-Path -LiteralPath $masterPath)) {
 }
 
 $harnesses = [ordered]@{
-    'Antigravity'       = (Join-Path $env:USERPROFILE '.gemini\config\plugins\topic-manager\rules\AGENTS.md')
+    'Antigravity'       = (Join-Path $env:USERPROFILE '.gemini\AGENTS.md')
     'DeepSeekHarness'   = (Join-Path $env:USERPROFILE '.dsh\AGENTS.md')
     'OpenCode'          = (Join-Path $env:USERPROFILE '.config\opencode\AGENTS.md')
     'CommandCode'       = (Join-Path $env:USERPROFILE '.commandcode\AGENTS.md')
     'ClaudeCode'        = (Join-Path $env:USERPROFILE '.claude\CLAUDE.md')
     'Codex'             = (Join-Path $env:USERPROFILE '.codex\AGENTS.md')
+    'Freebuff'          = (Join-Path $env:USERPROFILE '.AGENTS.md')
 }
 
 function Get-TextHash([string]$path) {
@@ -123,4 +125,4 @@ if (-not $NoGitPush) {
     }
 }
 
-Write-Host "[DONE] All 6 agent harnesses + Master are fully in sync!" -ForegroundColor Green
+Write-Host "[DONE] All 7 agent harnesses + Master are fully in sync!" -ForegroundColor Green
