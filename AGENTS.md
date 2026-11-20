@@ -91,3 +91,4 @@ After completing any feature, architectural change, or significant fix:
 
 ## 8. Live User Preferences (Auto-Captured)
 *(All preferences up to 2026-11-19 have been consolidated into Sections 1–7. Append newly discovered preferences below.)*
+- [PREF: One-Time-Git-Archive-Snapshots | 2026-11-20 | Git & Workflow] Archive requests (e.g., git archive / zip creation) are strictly one-time actions. Never automatically re-create, update, or refresh archive files on subsequent commits or tasks unless explicitly instructed by the user.
