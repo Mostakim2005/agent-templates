@@ -40,7 +40,7 @@ $targets = [ordered]@{
     'Freebuff'        = (Join-Path $env:USERPROFILE '.AGENTS.md')
 }
 
-function Get-Section8Prefs([string]$Path) {
+function Get-Section8Pref([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) { return @() }
     $lines = [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::UTF8)
     $inSection8 = $false
@@ -87,7 +87,7 @@ foreach ($entry in $targets.GetEnumerator()) {
     $name = $entry.Key
     $path = $entry.Value
     $status = Get-TargetStatus $name $path $masterPath
-    $prefs = Get-Section8Prefs $path
+    $prefs = Get-Section8Pref $path
     $statusRows.Add("| $name | $status | $($prefs.Count) |")
 
     foreach ($pref in $prefs) {

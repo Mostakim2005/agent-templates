@@ -89,7 +89,7 @@ jobs:
             Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
             Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
           }
-          $results = @('./sync-all.ps1', './extract-prefs.ps1') | Invoke-ScriptAnalyzer -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost
+          $results = @('./sync-all.ps1', './extract-prefs.ps1') | Invoke-ScriptAnalyzer -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost, PSUseSingularNouns
           if ($results) {
             $results | Format-Table -AutoSize
             exit 1

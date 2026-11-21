@@ -72,7 +72,7 @@ function Test-PointsToMaster([string]$Path, [string]$MasterFullPath) {
     }
 }
 
-function Get-Section8Prefs([string]$Path) {
+function Get-Section8Pref([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) { return @() }
     $lines = [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::UTF8)
     $inSection8 = $false
@@ -107,14 +107,14 @@ function Invoke-Git([string[]]$GitArgs) {
 }
 
 # Step 1: Rescue any unique Section 8 preferences from detached/non-symlink harness copies
-$masterPrefs = Get-Section8Prefs $masterPath
+$masterPrefs = Get-Section8Pref $masterPath
 $rescuedPrefs = New-Object System.Collections.Generic.List[string]
 
 foreach ($entry in $harnesses.GetEnumerator()) {
     $hName = $entry.Key
     $hPath = $entry.Value
     if ((Test-Path -LiteralPath $hPath) -and -not (Test-PointsToMaster $hPath $masterPath)) {
-        $hPrefs = Get-Section8Prefs $hPath
+        $hPrefs = Get-Section8Pref $hPath
         foreach ($pref in $hPrefs) {
             if (($masterPrefs -notcontains $pref) -and (-not $rescuedPrefs.Contains($pref))) {
                 $rescuedPrefs.Add($pref)
