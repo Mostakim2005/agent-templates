@@ -22,7 +22,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$TemplatesDir = $PSScriptRoot,
+    [string]$TemplatesDir,
     [switch]$NoGitPush,
     [switch]$CopyOnly
 )
@@ -30,6 +30,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $env:GIT_TERMINAL_PROMPT = '0'
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+if (-not $TemplatesDir) {
+    $TemplatesDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Definition }
+}
+if (-not $TemplatesDir) {
+    $TemplatesDir = (Join-Path $env:USERPROFILE '.agent-templates')
+}
 
 $masterPath = (Resolve-Path -LiteralPath (Join-Path $TemplatesDir 'AGENTS.md')).Path
 if (-not (Test-Path -LiteralPath $masterPath)) {
@@ -86,7 +93,13 @@ function Get-Section8Prefs([string]$Path) {
 }
 
 function Invoke-Git([string[]]$GitArgs) {
-    $output = & git -C $TemplatesDir @GitArgs 2>&1
+    $prevEAP = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $output = & git -C $TemplatesDir @GitArgs 2>&1
+    } finally {
+        $ErrorActionPreference = $prevEAP
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "git $($GitArgs -join ' ') failed (exit $LASTEXITCODE):`n$($output -join "`n")"
     }

@@ -10,12 +10,22 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$TemplatesDir = $PSScriptRoot,
-    [string]$OutputFile = (Join-Path $PSScriptRoot 'SECTION8_REVIEW.md')
+    [string]$TemplatesDir,
+    [string]$OutputFile
 )
 
 $ErrorActionPreference = 'Stop'
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+if (-not $TemplatesDir) {
+    $TemplatesDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Definition }
+}
+if (-not $TemplatesDir) {
+    $TemplatesDir = (Join-Path $env:USERPROFILE '.agent-templates')
+}
+if (-not $OutputFile) {
+    $OutputFile = Join-Path $TemplatesDir 'SECTION8_REVIEW.md'
+}
 
 $masterPath = (Resolve-Path -LiteralPath (Join-Path $TemplatesDir 'AGENTS.md')).Path
 
