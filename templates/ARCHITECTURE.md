@@ -1,5 +1,5 @@
-# System Architecture (`ARCHITECTURE.md`)
-> **1-Line Summary:** Plain-English visual map of how the app works, why we chose each tool, and step-by-step recipes for adding new features. *(Build, lint, and test commands live in the project's root `AGENTS.md`.)*
+# System Architecture & Visual Flows (`ARCHITECTURE.md`)
+> **1-Line Summary:** Single living visual map of how the app works, why we chose each tool, color-coded end-to-end feature/subsystem flowcharts, and step-by-step recipes for adding new features. *(Build, lint, and test commands live in the project's root `AGENTS.md`.)*
 
 ## 1. High-Level Visual System Map
 * **Plain-English Overview:** [2–3 simple sentences explaining how the user interface, core logic, and storage connect from start to finish.]
@@ -28,12 +28,12 @@ flowchart TB
 | --- | --- | --- |
 | Host / UI | [e.g., Electron + Vue 3] | [1-sentence practical reason] |
 
-## 3. Core Subsystems & Engineering Tricks
+## 3. Core Subsystems & Visual Feature Flows
+*(Update diagrams here in place whenever a feature or subsystem flow changes—no separate visual changelog needed.)*
 
 ### [SUBSYSTEM: Descriptive-Mechanism-Name] | Aliases: keywords, component names
-> **1-Line Summary:** [How this part of the program works in plain English.]
-* **How It Works (Plain English):** [Clear explanation without jargon — where the flow begins, how parent and child parts interact, and what output is produced.]
-* **Data Flow Diagram:**
+> **1-Line Summary:** [How this subsystem works from start to finish in plain English.]
+* **Plain-English Walkthrough:** [2–3 simple, jargon-free sentences explaining where the flow begins, how parent and child parts interact, and what output the user sees.]
 
 ```mermaid
 flowchart LR
@@ -58,6 +58,12 @@ flowchart LR
 
 * **Code Anchors (Grep Targets):**
   * `src/path/file.ts` -> `functionOrClassName`
+
+### [FLOW: Descriptive-Feature-Flow-Name] | Aliases: feature name, user action, keywords
+> **1-Line Summary:** [What this end-to-end feature flow does from user trigger to final output in one sentence.]
+* **Plain-English Walkthrough:** [Explain where the user action starts, what intermediate steps run, and how errors are handled.]
+* **Code Anchors (Grep Targets):**
+  * `src/path/file.ts` -> `entryFunctionName`, `childHandlerName`
 
 ## 4. Recipes: How to Add New Things Safely
 * **To add a new [Feature/Step/Template]:**

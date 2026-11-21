@@ -1,0 +1,9 @@
+# Local generated Section 8 preference review report
+SECTION8_REVIEW.md
+
+# OS / Editor artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.bak

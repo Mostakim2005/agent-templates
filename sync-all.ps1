@@ -1,93 +1,128 @@
 <#
 .SYNOPSIS
-  Two-way synchronization for master AGENTS.md across all AI agent harnesses with automated Git commit and push.
+  Symlink-first synchronization for master AGENTS.md across all AI agent harnesses with Section 8 rescue and safe Git push.
 
 .DESCRIPTION
-  Synchronizes AGENTS.md across:
-  1. Master Repository : C:\Users\kazir\.agent-templates\AGENTS.md
-  2. Antigravity       : C:\Users\kazir\.gemini\AGENTS.md
-  3. DeepSeek Harness  : C:\Users\kazir\.dsh\AGENTS.md
-  4. OpenCode          : C:\Users\kazir\.config\opencode\AGENTS.md
-  5. Command Code      : C:\Users\kazir\.commandcode\AGENTS.md
-  6. Claude Code       : C:\Users\kazir\.claude\CLAUDE.md
-  7. Codex / ChatGPT   : C:\Users\kazir\.codex\AGENTS.md
-  8. Freebuff          : C:\Users\kazir\.AGENTS.md
+  Links (or copies as fallback when run without Admin/Developer Mode) master AGENTS.md to:
+  1. Antigravity       : %USERPROFILE%\.gemini\AGENTS.md
+  2. DeepSeek Harness  : %USERPROFILE%\.dsh\AGENTS.md
+  3. OpenCode          : %USERPROFILE%\.config\opencode\AGENTS.md
+  4. Command Code      : %USERPROFILE%\.commandcode\AGENTS.md
+  5. Claude Code       : %USERPROFILE%\.claude\CLAUDE.md
+  6. Codex / ChatGPT   : %USERPROFILE%\.codex\AGENTS.md
+  7. Freebuff          : %USERPROFILE%\.AGENTS.md
 
-  Two-Way Sync Logic:
-  - Compares timestamps and SHA256 hashes across all targets.
-  - If any target harness is newer than the Master and differs, Master is updated from that harness.
-  - If Master is newer, all harnesses are updated from Master.
-  - When changes occur, changes are automatically committed to Git and pushed to GitHub.
+  How It Works:
+  - Before linking/updating, scans any non-symlink (detached) harness file for new Section 8 `- [PREF: ...]`
+    entries not yet in Master and rescues them into Master AGENTS.md so no preferences are lost.
+  - Creates Windows symbolic links pointing every harness directly to Master AGENTS.md (true single source of truth).
+  - If symlink creation is blocked (no Admin rights and Windows Developer Mode is off), falls back cleanly to
+    writing an exact UTF-8 (no BOM) copy and prints a 1-line tip.
+  - Commits, pulls with rebase, and pushes non-interactively (GIT_TERMINAL_PROMPT=0) with exit-code verification.
 #>
 [CmdletBinding()]
 param(
-    [string]$TemplatesDir = 'C:\Users\kazir\.agent-templates',
-    [switch]$NoGitPush
+    [string]$TemplatesDir = $PSScriptRoot,
+    [switch]$NoGitPush,
+    [switch]$CopyOnly
 )
 
 $ErrorActionPreference = 'Stop'
+$env:GIT_TERMINAL_PROMPT = '0'
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
-$masterPath = Join-Path $TemplatesDir 'AGENTS.md'
+$masterPath = (Resolve-Path -LiteralPath (Join-Path $TemplatesDir 'AGENTS.md')).Path
 if (-not (Test-Path -LiteralPath $masterPath)) {
     throw "Master protocol not found: $masterPath"
 }
 
 $harnesses = [ordered]@{
-    'Antigravity'       = (Join-Path $env:USERPROFILE '.gemini\AGENTS.md')
-    'DeepSeekHarness'   = (Join-Path $env:USERPROFILE '.dsh\AGENTS.md')
-    'OpenCode'          = (Join-Path $env:USERPROFILE '.config\opencode\AGENTS.md')
-    'CommandCode'       = (Join-Path $env:USERPROFILE '.commandcode\AGENTS.md')
-    'ClaudeCode'        = (Join-Path $env:USERPROFILE '.claude\CLAUDE.md')
-    'Codex'             = (Join-Path $env:USERPROFILE '.codex\AGENTS.md')
-    'Freebuff'          = (Join-Path $env:USERPROFILE '.AGENTS.md')
+    'Antigravity'     = (Join-Path $env:USERPROFILE '.gemini\AGENTS.md')
+    'DeepSeekHarness' = (Join-Path $env:USERPROFILE '.dsh\AGENTS.md')
+    'OpenCode'        = (Join-Path $env:USERPROFILE '.config\opencode\AGENTS.md')
+    'CommandCode'     = (Join-Path $env:USERPROFILE '.commandcode\AGENTS.md')
+    'ClaudeCode'      = (Join-Path $env:USERPROFILE '.claude\CLAUDE.md')
+    'Codex'           = (Join-Path $env:USERPROFILE '.codex\AGENTS.md')
+    'Freebuff'        = (Join-Path $env:USERPROFILE '.AGENTS.md')
 }
 
-function Get-TextHash([string]$path) {
-    if (-not (Test-Path -LiteralPath $path)) { return $null }
-    return (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+function Get-TextHash([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return $null }
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
 }
 
-$masterHash = Get-TextHash $masterPath
-$masterTime = (Get-Item -LiteralPath $masterPath).LastWriteTimeUtc
+function Test-PointsToMaster([string]$Path, [string]$MasterFullPath) {
+    if (-not (Test-Path -LiteralPath $Path)) { return $false }
+    $item = Get-Item -LiteralPath $Path -Force
+    if ($item.LinkType -ne 'SymbolicLink') { return $false }
+    $targets = @($item.Target)
+    if ($targets.Count -eq 0 -or -not $targets[0]) { return $false }
+    try {
+        $resolvedTarget = (Resolve-Path -LiteralPath $targets[0] -ErrorAction Stop).Path
+        return ($resolvedTarget -ieq $MasterFullPath)
+    } catch {
+        return $false
+    }
+}
 
-# Check if any harness has newer edits than Master
-$newestHarnessName = $null
-$newestHarnessTime = $masterTime
-$newestHarnessPath = $null
+function Get-Section8Prefs([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return @() }
+    $lines = [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::UTF8)
+    $inSection8 = $false
+    $prefs = @()
+    foreach ($line in $lines) {
+        if ($line -match '^##\s+8\.') {
+            $inSection8 = $true
+            continue
+        }
+        if ($inSection8 -and $line -match '^##\s+') {
+            break
+        }
+        if ($inSection8 -and $line -match '^\s*-\s+\[PREF:') {
+            $prefs += $line.Trim()
+        }
+    }
+    return $prefs
+}
+
+function Invoke-Git([string[]]$GitArgs) {
+    $output = & git -C $TemplatesDir @GitArgs 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "git $($GitArgs -join ' ') failed (exit $LASTEXITCODE):`n$($output -join "`n")"
+    }
+    return $output
+}
+
+# Step 1: Rescue any unique Section 8 preferences from detached/non-symlink harness copies
+$masterPrefs = Get-Section8Prefs $masterPath
+$rescuedPrefs = New-Object System.Collections.Generic.List[string]
 
 foreach ($entry in $harnesses.GetEnumerator()) {
     $hName = $entry.Key
     $hPath = $entry.Value
-    if (Test-Path -LiteralPath $hPath) {
-        $hHash = Get-TextHash $hPath
-        $hTime = (Get-Item -LiteralPath $hPath).LastWriteTimeUtc
-        if ($hHash -ne $masterHash -and $hTime -gt $newestHarnessTime) {
-            $newestHarnessTime = $hTime
-            $newestHarnessName = $hName
-            $newestHarnessPath = $hPath
+    if ((Test-Path -LiteralPath $hPath) -and -not (Test-PointsToMaster $hPath $masterPath)) {
+        $hPrefs = Get-Section8Prefs $hPath
+        foreach ($pref in $hPrefs) {
+            if (($masterPrefs -notcontains $pref) -and (-not $rescuedPrefs.Contains($pref))) {
+                $rescuedPrefs.Add($pref)
+                Write-Host "[RESCUE] Found new Section 8 preference in detached '$hName': $pref" -ForegroundColor Cyan
+            }
         }
     }
 }
 
-$sourceOfTruth = "Master ($masterPath)"
-$changed = $false
-
-if ($newestHarnessName) {
-    Write-Host "[SYNC] Target '$newestHarnessName' has newer changes than Master. Promoting to Master..." -ForegroundColor Cyan
-    $sourceContent = [System.IO.File]::ReadAllText($newestHarnessPath, [System.Text.Encoding]::UTF8)
-    $sourceContent = $sourceContent -replace '<!--[\s\S]*?-->\r?\n?', ''
-    [System.IO.File]::WriteAllText($masterPath, $sourceContent.TrimStart(), $utf8NoBom)
-    $masterHash = Get-TextHash $masterPath
-    $sourceOfTruth = "$newestHarnessName ($newestHarnessPath)"
-    $changed = $true
-} else {
-    Write-Host "[SYNC] Using Master AGENTS.md as source of truth." -ForegroundColor Cyan
+if ($rescuedPrefs.Count -gt 0) {
+    $masterText = [System.IO.File]::ReadAllText($masterPath, [System.Text.Encoding]::UTF8).TrimEnd()
+    $appendBlock = ($rescuedPrefs -join "`n")
+    [System.IO.File]::WriteAllText($masterPath, "$masterText`n$appendBlock`n", $utf8NoBom)
+    Write-Host "[RESCUE] Appended $($rescuedPrefs.Count) preference(s) into Master AGENTS.md Section 8." -ForegroundColor Green
 }
 
 $masterContent = [System.IO.File]::ReadAllText($masterPath, [System.Text.Encoding]::UTF8)
+$masterHash = Get-TextHash $masterPath
+$symlinkFallbackHit = $false
 
-# Replicate to all harnesses
+# Step 2: Ensure every harness is symlinked to Master (or fall back cleanly to copy if unprivileged)
 foreach ($entry in $harnesses.GetEnumerator()) {
     $hName = $entry.Key
     $hPath = $entry.Value
@@ -96,33 +131,56 @@ foreach ($entry in $harnesses.GetEnumerator()) {
         New-Item -ItemType Directory -Path $hDir -Force | Out-Null
     }
 
+    if (-not $CopyOnly -and (Test-PointsToMaster $hPath $masterPath)) {
+        Write-Host "  = $hName is symlinked to Master." -ForegroundColor Gray
+        continue
+    }
+
+    if (-not $CopyOnly) {
+        try {
+            if (Test-Path -LiteralPath $hPath) {
+                Remove-Item -LiteralPath $hPath -Force
+            }
+            New-Item -ItemType SymbolicLink -Path $hPath -Target $masterPath -Force | Out-Null
+            Write-Host "  -> Linked $hName ($hPath -> Master)" -ForegroundColor Green
+            continue
+        } catch {
+            $symlinkFallbackHit = $true
+        }
+    }
+
+    # Copy fallback (or explicit -CopyOnly mode)
     $currentHash = Get-TextHash $hPath
     if ($currentHash -ne $masterHash) {
         [System.IO.File]::WriteAllText($hPath, $masterContent, $utf8NoBom)
-        Write-Host "  -> Updated $hName ($hPath)" -ForegroundColor Green
-        $changed = $true
+        Write-Host "  -> Copied Master to $hName ($hPath)" -ForegroundColor Yellow
     } else {
-        Write-Host "  = $hName is in sync." -ForegroundColor Gray
+        Write-Host "  = $hName copy is in sync." -ForegroundColor Gray
     }
 }
 
-# Git commit and push if changes occurred or if repository has uncommitted changes
+if ($symlinkFallbackHit) {
+    Write-Host "[TIP] Symlink creation needs a one-time 'Run as Administrator' (or Windows Developer Mode). Used safe file copy instead." -ForegroundColor Yellow
+}
+
+# Step 3: Non-interactive Git commit, rebase, and push
 if (-not $NoGitPush) {
-    $gitStatus = git -C $TemplatesDir status --porcelain
+    $gitStatus = Invoke-Git @('status', '--porcelain')
     if ($gitStatus) {
         Write-Host "[GIT] Committing and pushing changes to GitHub..." -ForegroundColor Yellow
-        git -C $TemplatesDir add -A
-        $commitMsg = if ($newestHarnessName) {
-            "chore(agents): auto-sync AGENTS.md updates from $newestHarnessName"
+        Invoke-Git @('add', '-A') | Out-Null
+        $commitMsg = if ($rescuedPrefs.Count -gt 0) {
+            "chore(agents): rescue $($rescuedPrefs.Count) Section 8 pref(s) and sync AGENTS.md"
         } else {
             "chore(agents): sync AGENTS.md across all agent harnesses"
         }
-        git -C $TemplatesDir commit -m $commitMsg
-        git -C $TemplatesDir push origin main
+        Invoke-Git @('commit', '-m', $commitMsg) | Out-Null
+        Invoke-Git @('pull', '--rebase', 'origin', 'main') | Out-Null
+        Invoke-Git @('push', 'origin', 'main') | Out-Null
         Write-Host "[GIT] Successfully pushed to origin main." -ForegroundColor Green
     } else {
         Write-Host "[GIT] Master repository working tree clean. Everything up to date." -ForegroundColor Gray
     }
 }
 
-Write-Host "[DONE] All 7 agent harnesses + Master are fully in sync!" -ForegroundColor Green
+Write-Host "[DONE] All $($harnesses.Count) agent harnesses + Master are in sync!" -ForegroundColor Green

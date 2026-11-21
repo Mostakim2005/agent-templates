@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-templates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate structure, YAML, filenames, and template headers
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import re
+          import sys
+          import yaml
+
+          errors = []
+          root = pathlib.Path(".")
+
+          required = [
+              "AGENTS.md",
+              "LICENSE",
+              ".gitignore",
+              "sync-all.ps1",
+              "extract-prefs.ps1",
+              "run-sync.bat",
+              "run-extract.bat",
+              "templates/PRODUCT.md",
+              "templates/ARCHITECTURE.md",
+              "templates/DECISIONS_AND_TRAPS.md",
+              "templates/PROJECT_AGENTS.md",
+              "templates/ci.yml",
+          ]
+          for name in required:
+              if not (root / name).is_file():
+                  errors.append(f"Missing required file: {name}")
+
+          for path in root.rglob("*"):
+              if ".git" in path.parts:
+                  continue
+              if " " in path.name:
+                  errors.append(f"Filename contains spaces: {path}")
+
+          for yml in [root / ".github/workflows/ci.yml", root / "templates/ci.yml"]:
+              if yml.is_file():
+                  try:
+                      yaml.safe_load(yml.read_text(encoding="utf-8"))
+                  except Exception as exc:
+                      errors.append(f"Invalid YAML in {yml}: {exc}")
+
+          header_re = re.compile(r"^### \[(FEATURE|WISHLIST|SUBSYSTEM|FLOW|DECISION|TRAP): [^\]]+\] \| Aliases: .+")
+          for md_path in sorted((root / "templates").glob("*.md")):
+              lines = md_path.read_text(encoding="utf-8").splitlines()
+              for idx, line in enumerate(lines):
+                  if line.startswith("### ["):
+                      if not header_re.match(line):
+                          errors.append(f"{md_path}:{idx + 1} invalid header format: {line}")
+                      next_line = lines[idx + 1] if idx + 1 < len(lines) else ""
+                      if not next_line.startswith("> **1-Line Summary:**"):
+                          errors.append(f"{md_path}:{idx + 2} missing immediate '> **1-Line Summary:**' after header")
+
+          if errors:
+              print("\n".join(errors), file=sys.stderr)
+              sys.exit(1)
+          print("All template, YAML, and header checks passed.")
+          PY
+
+  lint-powershell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint PowerShell scripts with PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
+          $results = Invoke-ScriptAnalyzer -Path ./sync-all.ps1, ./extract-prefs.ps1 -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost
+          if ($results) {
+            $results | Format-Table -AutoSize
+            exit 1
+          }
+          Write-Host "PSScriptAnalyzer passed with no warnings or errors."

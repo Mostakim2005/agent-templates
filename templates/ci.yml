@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest # Switch to windows-latest for Windows-only apps (WPF/WinForms/PowerShell)
+    steps:
+      - uses: actions/checkout@v4
+      # Add runtime setup here (e.g., actions/setup-node@v4, actions/setup-python@v5, actions/setup-dotnet@v4)
+      - name: Install dependencies
+        run: echo "Replace with stack install command (e.g., npm ci)"
+      - name: Lint & Typecheck
+        run: echo "Replace with stack lint/typecheck commands"
+      - name: Test
+        run: echo "Replace with stack test command"
+      - name: Build
+        run: echo "Replace with stack build command"
