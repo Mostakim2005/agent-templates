@@ -85,9 +85,11 @@ jobs:
       - name: Lint PowerShell scripts with PSScriptAnalyzer
         shell: pwsh
         run: |
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
-          $results = Invoke-ScriptAnalyzer -Path ./sync-all.ps1, ./extract-prefs.ps1 -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost
+          if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
+            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+            Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
+          }
+          $results = @('./sync-all.ps1', './extract-prefs.ps1') | Invoke-ScriptAnalyzer -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost
           if ($results) {
             $results | Format-Table -AutoSize
             exit 1
