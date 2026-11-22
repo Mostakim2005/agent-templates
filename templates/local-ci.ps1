@@ -131,7 +131,7 @@ if ($failedStage) {
     $md.Add("| **Repository** | ``$repoTitle`` (Top-Secret Local-Only) |")
     $md.Add("| **Branch** | ``$branch`` |")
     $md.Add("| **Commit** | ``$shortSha`` (``$sha``) |")
-    $md.Add("| **Failed Stage** | ``$($failedStage.Stage)`` — ``$($failedStage.Command)`` |")
+    $md.Add("| **Failed Stage** | ``$($failedStage.Stage)`` - ``$($failedStage.Command)`` |")
     $md.Add("| **Generated** | $timestamp |")
     $md.Add('')
     $md.Add('## Stage Ledger')

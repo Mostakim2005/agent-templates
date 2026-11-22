@@ -1,6 +1,10 @@
 # Local generated Section 8 preference review report
 SECTION8_REVIEW.md
 
+# CI failure reports and temporary logs
+.ci-logs/
+.ci-report/
+
 # OS / Editor artifacts
 .DS_Store
 Thumbs.db
