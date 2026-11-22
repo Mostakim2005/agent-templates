@@ -32,13 +32,14 @@ Default posture is **Universal Parity**: every interactive application should ex
 2. **Cognitive Load Gate:** Does adding this surface reduce clicks or friction, or does it duplicate an adjacent control with identical scope? *(Avoid two controls doing the exact same thing on the same screen unless one is global and one is contextual.)*
 3. **Viewport & Ergonomics Gate:** Does the surface respect viewport constraints (narrow panes, touch targets >= 44x44 px, screen readers, reduced motion) without crowding primary content?
 
-### 1.3 Standard Agent Output Format
+### 1.3 Standard Agent Output Format (Git-Patch Compatible & Downloads Output)
 
-When completing a `UIUX.md` audit, output:
+When completing a `UIUX.md` audit, save the report directly to `%USERPROFILE%\Downloads\<Repo Title Case> - UIUX Audit.md` (or `<Repo Title Case> - UIUX Audit (<Scope>).md` when scoped) with enough concrete detail to generate clean `.patch` files:
 
-1. **Coverage Ledger Table** (`Module ID`, `Feature`, `Status`, `Feasibility Verdict`, `Exact File & Symbol`, `Actionable Fix`).
-2. **Systemic Design Gaps** (theming/tokens, contrast, motion, keyboard ergonomics, accessibility, documentation drift).
-3. **Phased Implementation Plan** (P0 Entry-Point Parity -> P1 Visual & Token Hygiene -> P2 Interactive Polish & Guardrails -> P3 Docs & Lateral Upgrades).
+1. **Metadata Header** (Repository, Branch, Commit SHA, Detected Platform/Framework).
+2. **Coverage Ledger Table** (`Module ID`, `Feature`, `Status`, `Feasibility Verdict`, `Exact File & Symbol`, `Actionable Fix / Patch Spec`).
+3. **Systemic Design Gaps** (theming/tokens, contrast, motion, keyboard ergonomics, accessibility, documentation drift) with exact `path/to/file.ext :: symbolName` anchors.
+4. **Phased Implementation Plan** (P0 Entry-Point Parity -> P1 Visual & Token Hygiene -> P2 Interactive Polish & Guardrails -> P3 Docs & Lateral Upgrades) with concrete patch specifications.
 
 ---
 
@@ -113,7 +114,7 @@ When completing a `UIUX.md` audit, output:
 ### Module U10: Documentation & Visual Parity
 
 - [ ] **U10.1 `README.md` UI Surface Inventory:** Accurately documents every user-facing entry point (launch controls, views, dialogs, commands, status indicators, context menus, settings) matching shipped code.
-- [ ] **U10.2 Product & Visual Flow Documentation:** Feature maps (`PRODUCT.md`) and visual flow logs (`VISUAL_LOG.md`) stay synchronized with actual UI flows.
+- [ ] **U10.2 Product & Visual Flow Documentation:** Feature maps (`PRODUCT.md`) and architecture/visual flow maps (`ARCHITECTURE.md`) stay synchronized with actual UI flows.
 - [ ] **U10.3 Agent Guardrails (`AGENTS.md`):** Records core UI/UX invariants (design tokens, style prefixes, keyboard traps, close-protection rules) so future sessions never regress parity.
 
 ---

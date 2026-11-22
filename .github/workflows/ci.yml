@@ -17,10 +17,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Validate structure, YAML, filenames, and template headers
         run: |
-          python3 - <<'PY'
+          mkdir -p .ci-logs
+          set -o pipefail
+          python3 - <<'PY' 2>&1 | tee .ci-logs/validate-templates.log
           import pathlib
           import re
           import sys
@@ -31,6 +35,8 @@ jobs:
 
           required = [
               "AGENTS.md",
+              "AUDITS.md",
+              "UIUX.md",
               "LICENSE",
               ".gitignore",
               "sync-all.ps1",
@@ -42,13 +48,14 @@ jobs:
               "templates/DECISIONS_AND_TRAPS.md",
               "templates/PROJECT_AGENTS.md",
               "templates/ci.yml",
+              "templates/local-ci.ps1",
           ]
           for name in required:
               if not (root / name).is_file():
                   errors.append(f"Missing required file: {name}")
 
           for path in root.rglob("*"):
-              if ".git" in path.parts:
+              if ".git" in path.parts or ".ci-logs" in path.parts or ".ci-report" in path.parts:
                   continue
               if " " in path.name:
                   errors.append(f"Filename contains spaces: {path}")
@@ -77,21 +84,120 @@ jobs:
           print("All template, YAML, and header checks passed.")
           PY
 
+      - name: Generate patch-ready CI failure report (validate-templates)
+        if: failure()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import datetime, os, pathlib, subprocess
+          report_dir = pathlib.Path(".ci-report")
+          report_dir.mkdir(exist_ok=True)
+          report_path = report_dir / "Agent Templates - CI Failure Report (Validate Templates).md"
+          sha = os.environ.get("GITHUB_SHA", "unknown")
+          branch = os.environ.get("GITHUB_REF_NAME", "unknown")
+          run_url = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
+          log_text = pathlib.Path(".ci-logs/validate-templates.log").read_text(encoding="utf-8", errors="replace") if pathlib.Path(".ci-logs/validate-templates.log").is_file() else "(no log captured)"
+          diff_stat = subprocess.run(["git", "show", "--stat", "--no-color", "--format=", "HEAD"], capture_output=True, text=True).stdout.strip()
+          body = "\n".join([
+              "# Agent Templates - CI Failure Report (Validate Templates)",
+              "",
+              f"- **Repository:** `{os.environ.get('GITHUB_REPOSITORY', '')}`",
+              f"- **Branch / Commit:** `{branch}` / `{sha[:8]}`",
+              f"- **Workflow Run:** {run_url}",
+              f"- **Generated:** {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+              "",
+              "## Failing Output",
+              "```text",
+              log_text.strip(),
+              "```",
+              "",
+              "## Triggering Commit (`git show --stat`)",
+              "```text",
+              diff_stat or "(none)",
+              "```",
+          ]) + "\n"
+          report_path.write_text(body, encoding="utf-8")
+          if os.environ.get("GITHUB_STEP_SUMMARY"):
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:
+                  fh.write(body)
+          PY
+
+      - name: Upload failure report artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-failure-report-validate-templates
+          path: .ci-report/*.md
+          if-no-files-found: error
+          retention-days: 14
+
   lint-powershell:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Lint PowerShell scripts with PSScriptAnalyzer
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Path .ci-logs -Force | Out-Null
           if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
             Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
             Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
           }
-          $results = @('./sync-all.ps1', './extract-prefs.ps1') | Invoke-ScriptAnalyzer -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost, PSUseSingularNouns
+          $results = @('./sync-all.ps1', './extract-prefs.ps1', './templates/local-ci.ps1') | Invoke-ScriptAnalyzer -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost, PSUseSingularNouns
           if ($results) {
-            $results | Format-Table -AutoSize
+            $formatted = ($results | Format-Table -AutoSize | Out-String)
+            $formatted | Set-Content -Path .ci-logs/lint-powershell.log -Encoding UTF8
+            Write-Host $formatted
             exit 1
           }
-          Write-Host "PSScriptAnalyzer passed with no warnings or errors."
+          "PSScriptAnalyzer passed with no warnings or errors." | Tee-Object -FilePath .ci-logs/lint-powershell.log
+
+      - name: Generate patch-ready CI failure report (lint-powershell)
+        if: failure()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import datetime, os, pathlib, subprocess
+          report_dir = pathlib.Path(".ci-report")
+          report_dir.mkdir(exist_ok=True)
+          report_path = report_dir / "Agent Templates - CI Failure Report (Lint PowerShell).md"
+          sha = os.environ.get("GITHUB_SHA", "unknown")
+          branch = os.environ.get("GITHUB_REF_NAME", "unknown")
+          run_url = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
+          log_text = pathlib.Path(".ci-logs/lint-powershell.log").read_text(encoding="utf-8", errors="replace") if pathlib.Path(".ci-logs/lint-powershell.log").is_file() else "(no log captured)"
+          diff_stat = subprocess.run(["git", "show", "--stat", "--no-color", "--format=", "HEAD"], capture_output=True, text=True).stdout.strip()
+          body = "\n".join([
+              "# Agent Templates - CI Failure Report (Lint PowerShell)",
+              "",
+              f"- **Repository:** `{os.environ.get('GITHUB_REPOSITORY', '')}`",
+              f"- **Branch / Commit:** `{branch}` / `{sha[:8]}`",
+              f"- **Workflow Run:** {run_url}",
+              f"- **Generated:** {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+              "",
+              "## Failing Output",
+              "```text",
+              log_text.strip(),
+              "```",
+              "",
+              "## Triggering Commit (`git show --stat`)",
+              "```text",
+              diff_stat or "(none)",
+              "```",
+          ]) + "\n"
+          report_path.write_text(body, encoding="utf-8")
+          if os.environ.get("GITHUB_STEP_SUMMARY"):
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:
+                  fh.write(body)
+          PY
+
+      - name: Upload failure report artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-failure-report-lint-powershell
+          path: .ci-report/*.md
+          if-no-files-found: error
+          retention-days: 14

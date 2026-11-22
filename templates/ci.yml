@@ -17,12 +17,164 @@ jobs:
     runs-on: ubuntu-latest # Switch to windows-latest for Windows-only apps (WPF/WinForms/PowerShell)
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
       # Add runtime setup here (e.g., actions/setup-node@v4, actions/setup-python@v5, actions/setup-dotnet@v4)
-      - name: Install dependencies
-        run: echo "Replace with stack install command (e.g., npm ci)"
-      - name: Lint & Typecheck
-        run: echo "Replace with stack lint/typecheck commands"
-      - name: Test
-        run: echo "Replace with stack test command"
-      - name: Build
-        run: echo "Replace with stack build command"
+
+      - name: Prepare CI log directory
+        run: mkdir -p .ci-logs
+
+      - name: 1. Install dependencies
+        run: |
+          set -o pipefail
+          echo "Replace with stack install command (e.g., npm ci)" 2>&1 | tee .ci-logs/01-install.log
+
+      - name: 2. Format & Lint
+        run: |
+          set -o pipefail
+          echo "Replace with formatter/linter (e.g., npm run lint / ruff check .)" 2>&1 | tee .ci-logs/02-format-lint.log
+
+      - name: 3. Static Type Check
+        run: |
+          set -o pipefail
+          echo "Replace with typechecker (e.g., npx tsc --noEmit / pyright)" 2>&1 | tee .ci-logs/03-typecheck.log
+
+      - name: 4. Unit Tests
+        run: |
+          set -o pipefail
+          echo "Replace with unit tests (e.g., npm run test:unit / pytest tests/unit)" 2>&1 | tee .ci-logs/04-unit-tests.log
+
+      - name: 5. Integration Tests
+        run: |
+          set -o pipefail
+          echo "Replace with integration tests (e.g., npm run test:integration / pytest tests/integration)" 2>&1 | tee .ci-logs/05-integration-tests.log
+
+      - name: 6. E2E & Headless UI Tests (Optional)
+        run: |
+          set -o pipefail
+          # Example: npx playwright install --with-deps chromium && npx playwright test
+          echo "Replace with E2E/UI tests when project has a UI" 2>&1 | tee .ci-logs/06-e2e-ui-tests.log
+
+      - name: 7. Security & Secret Scan
+        run: |
+          set -o pipefail
+          # Example: npm audit --audit-level=high || pip-audit; add gitleaks/gitleaks-action for secret scanning
+          echo "Replace with dependency audit & secret scan" 2>&1 | tee .ci-logs/07-security-scan.log
+
+      - name: 8. Build & Smoke Test
+        run: |
+          set -o pipefail
+          echo "Replace with build & smoke test (e.g., npm run build)" 2>&1 | tee .ci-logs/08-build-smoke.log
+
+      - name: 9. Structure & Doc Parity Checks
+        run: |
+          set -o pipefail
+          echo "Replace with YAML/JSON/doc header parity checks" 2>&1 | tee .ci-logs/09-structure-docs.log
+
+      - name: Generate patch-ready CI failure report
+        if: failure()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import datetime
+          import os
+          import pathlib
+          import re
+          import subprocess
+
+          repo_slug = os.environ.get("GITHUB_REPOSITORY", "unknown/repo").split("/")[-1]
+          repo_title = " ".join(w.capitalize() for w in re.split(r"[-_]+", repo_slug) if w) or repo_slug
+          report_dir = pathlib.Path(".ci-report")
+          report_dir.mkdir(exist_ok=True)
+          report_name = f"{repo_title} - CI Failure Report.md"
+          report_path = report_dir / report_name
+
+          def run_cmd(cmd):
+              proc = subprocess.run(cmd, capture_output=True, text=True)
+              return proc.stdout.strip()
+
+          branch = os.environ.get("GITHUB_REF_NAME", "unknown")
+          sha = os.environ.get("GITHUB_SHA", "unknown")
+          short_sha = sha[:8]
+          run_url = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
+          timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+          commit_msg = run_cmd(["git", "log", "-1", "--pretty=%s"])
+          diff_stat = run_cmd(["git", "show", "--stat", "--no-color", "--format=", "HEAD"])
+          diff_patch = run_cmd(["git", "show", "--no-color", "--format=", "HEAD"])
+          if len(diff_patch) > 12000:
+              diff_patch = diff_patch[:12000] + "\n... [diff truncated for size; inspect full commit in repo] ..."
+
+          log_dir = pathlib.Path(".ci-logs")
+          log_files = sorted(log_dir.glob("*.log")) if log_dir.is_dir() else []
+          last_log_name = log_files[-1].name if log_files else "none"
+
+          sections = [
+              f"# {repo_title} - CI Failure Report",
+              "",
+              "## Metadata",
+              "| Field | Value |",
+              "| :--- | :--- |",
+              f"| **Repository** | `{os.environ.get('GITHUB_REPOSITORY', '')}` (`{repo_title}`) |",
+              f"| **Branch / Ref** | `{branch}` |",
+              f"| **Commit** | `{short_sha}` (`{sha}`) — {commit_msg} |",
+              f"| **Job** | `{os.environ.get('GITHUB_JOB', 'verify')}` |",
+              f"| **Last Executed Stage Log** | `{last_log_name}` |",
+              f"| **Workflow Run** | {run_url} |",
+              f"| **Generated** | {timestamp} |",
+              "",
+              "## Triggering Commit Summary (`git show --stat`)",
+              "```text",
+              diff_stat or "(no diff stat available)",
+              "```",
+              "",
+              "## Stage Logs (Most Recent Last)",
+          ]
+
+          if not log_files:
+              sections.append("_No stage logs were captured before failure. Check the workflow run URL above._")
+          else:
+              for lf in log_files:
+                  content = lf.read_text(encoding="utf-8", errors="replace").strip()
+                  if len(content) > 8000:
+                      content = "... [earlier output truncated] ...\n" + content[-8000:]
+                  sections.extend([
+                      f"### `{lf.name}`",
+                      "```text",
+                      content or "(empty)",
+                      "```",
+                      "",
+                  ])
+
+          sections.extend([
+              "## Triggering Commit Diff Excerpt",
+              "```diff",
+              diff_patch or "(no diff available)",
+              "```",
+              "",
+              "## Git-Patch Handoff Checklist",
+              "- Identify exact failing file paths and symbols (`path/to/file.ext :: symbolName`) from the failing stage log above.",
+              "- Verify root cause against the triggering commit diff and current repository files.",
+              "- Generate minimal, verified `.patch` file(s) (`git apply --check`) targeting the exact failing symbols.",
+          ])
+
+          report_text = "\n".join(sections) + "\n"
+          report_path.write_text(report_text, encoding="utf-8")
+
+          summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_file:
+              with open(summary_file, "a", encoding="utf-8") as fh:
+                  fh.write(report_text)
+
+          print(f"Generated CI failure report: {report_path}")
+          PY
+
+      - name: Upload patch-ready CI failure report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-failure-report
+          path: .ci-report/*.md
+          if-no-files-found: error
+          retention-days: 14

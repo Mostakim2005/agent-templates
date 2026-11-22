@@ -40,15 +40,16 @@ Use one of the following invocation patterns when handing this file to an AI cod
    * Label every finding as either `confirmed` (proven by a complete, traceable code path) or `needs_validation` (a specific, source-grounded boundary hypothesis blocked by runtime/environment state).
    * Assign severity (`Critical`, `High`, `Medium`, `Low`, `Informational`) **only** to `confirmed` findings. `needs_validation` items receive no severity and must state the exact runtime condition or header/config to check.
 4. **Zero Filler:** Skip praise, generic best-practice lectures, and vague advice. Every item must be specific, code-grounded, and ruthlessly practical.
-5. **Mandatory Output Format:**
-   * Generate clean, downloadable Markdown report(s) named after the repository: `<repo-name>-audit.md`, or split logically when large (e.g., `<repo-name>-audit-core-security-data.md`, `<repo-name>-audit-ui-a11y-testing.md`, `<repo-name>-audit-architecture-oss-lateral.md`).
+5. **Mandatory Output Format (Git-Patch Compatible & Downloads Output):**
+   * Save clean, git-patch-compatible Markdown report(s) directly to `%USERPROFILE%\Downloads\` using practical **Title Case**: `<Repo Title Case> - <Short Audit Identifier>.md` (e.g., `Music Manager - Code Audit.md`, or split logically when large such as `Music Manager - Security Audit.md`, `Music Manager - UIUX & A11y Audit.md`).
+   * Include a **Metadata** header (Repository, Branch, Commit SHA) and **Coverage Ledger** at the top so a frontier model can generate verified `.patch` files directly from the report.
    * Use this exact structure for every finding:
      * **ID & Module:** e.g., `[M1-01]`
      * **Status:** `confirmed` | `needs_validation`
      * **Severity / Impact:** `Critical` | `High` | `Medium` | `Low` | `Informational` (or `N/A — needs_validation`)
-     * **Exact File Paths & Symbols:** `path/to/file.ext :: ClassName.methodName (L12–L48)`
+     * **Exact File Paths & Symbols:** `path/to/file.ext :: ClassName.methodName` (symbol anchors only; never rely on fragile line numbers)
      * **Root Cause / Rationale:** Concise technical explanation grounded in the actual code.
-     * **Concrete Actionable Fix or Spec:** Exact patch specification, refactored contract, or replacement library/architecture.
+     * **Concrete Actionable Fix or Patch Spec:** Exact patch specification, refactored contract, or replacement library/architecture.
 
 ## Module 1: Bugs, Edge Cases, Concurrency & State Overlaps
 
