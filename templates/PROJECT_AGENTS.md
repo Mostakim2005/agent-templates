@@ -1,11 +1,12 @@
 # Project Operating Instructions (`AGENTS.md`)
-> **Notice:** This project inherits user persona, confirmation gates, GitHub-first CI/CD defaults, Top-Secret Local-Only rules, on-demand `AUDITS.md`/`UIUX.md` routing, visual standards, and documentation blueprints from the global master `AGENTS.md`. Do not duplicate those rules here.
+> **Notice:** This project inherits user persona, confirmation gates, OS-default vs. Shared Libraries/Ecosystem Registry rules, GitHub-first CI/CD defaults, Top-Secret Local-Only rules, on-demand `AUDITS.md`/`UIUX.md` and Downloads-folder disposable report routing, pre-commit doc sync, visual standards, and documentation blueprints from the global master `AGENTS.md`. Do not duplicate those rules here.
 
 ## 1. Repository Classification & Tech Stack
 * **Verification Mode:** `[GitHub-First (Remote Configured)]` *(or `[Top-Secret Local-Only — NO REMOTE, run local-ci.ps1 only]`)*
 * **Runtime / Language:** [e.g., Node.js v20+, TypeScript 5+, Electron 30]
 * **Framework / Host:** [e.g., Vue 3 + Tailwind CSS]
 * **Target OS / Build Output:** [e.g., Windows x64 portable .exe]
+* **Shared Libraries & Local Ports:** [None, or list shared JS/WASM assets from `%LOCALAPPDATA%\SharedLibraries` (`LOCAL_COMMON_LIBRARIES`) and local services/ports registered in `%USERPROFILE%\.local\share\ecosystem-registry.json` (`LOCAL_ECOSYSTEM_REGISTRY`)]
 
 ## 2. Verification & Build Commands (Mirrored in CI)
 *(For GitHub-backed repos, these run automatically in `.github/workflows/ci.yml` on push/PR; do not install heavy runtimes locally. For Top-Secret Local-Only repos, wire these into `local-ci.ps1`.)*
