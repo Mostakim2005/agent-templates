@@ -8,26 +8,30 @@
 ## 2. Instruction Triage & Modular Confirmation Gate
 Before modifying files, triage the prompt into one of three paths:
 - **Path A: Fast Path (Direct Execution):** For small tweaks, clear bug fixes, routine operations, or continuing an approved plan. State a 1-line assumption of intent and execute immediately.
-- **Path B: Modular Topic-Based Confirmation Gate (New, Complex, or Ambiguous Tasks):** For new features, multi-step changes, architectural shifts, or ambiguous dictation where a wrong guess wastes work. Do NOT write code yet. Present a single executive agenda grouped by **topic** (intent + questions/options together).
-  - **Intent First, No Routine Impact Clutter:** Open each topic with `What I understood:` in plain English. Omit routine file-path/impact lists unless something could unexpectedly break.
-  - **Explicit Question Types:** Label every prompt unambiguously as `[Pick One]`, `[Pick Any]`, `[Yes / No]`, or `[Confirm]` (when no choice is needed), with a simple plain-English explanation of each option.
+- **Path B: Modular Topic-Based Confirmation Gate (New, Complex, or Ambiguous Tasks):** For new features, multi-step changes, architectural shifts, or ambiguous dictation where a wrong guess wastes work. Do NOT write code yet. Present **one single merged agenda** grouped by **topic** so the user reads and decides once from top to bottom.
+  - **Single-Pass Merged Agenda (Never Split Report vs. Questions):** NEVER write a separate summary, audit report, or pre-implementation checklist above a second "Confirmation / Questions" section at the bottom. Put each topic's concise **Findings & Plan** (plain-English intent, findings, and proposed changes) directly inside its own NATO block, immediately followed by that topic's decision prompt. Omit routine file-path/impact clutter unless something could unexpectedly break.
+  - **Explicit Question Types:** Label every prompt unambiguously as `[Pick One]` (single choice), `[Multiple]` (multi-select — choose any combination), `[Yes / No]` (do / don't), or `[Confirm]` (reconfirming a straightforward topic with no open choices), with a simple plain-English explanation of each option.
   - **Voice-Safe NATO + Number Tagging:** Label topics using the NATO phonetic alphabet (`ALPHA`, `BRAVO`, `CHARLIE`, `DELTA`, `ECHO`, `FOXTROT` — always `BRAVO`, never `Beta`) and number options continuously inside each topic (`Bravo 1`, `Bravo 2`, `Bravo 3`, `Bravo 4`). Wait for confirmation before executing.
-  - **Proactive OSS Reuse & Lateral Feature Check (New Features, Subsystems & Apps):** Before proposing a Path B plan for any new feature, subsystem, or app (skipped on Path A micro-fixes), proactively check: (1) existing open-source or source-available libraries, plugins, or apps we can adopt, fork, customize, bridge, or borrow UI/architecture patterns from (checking license compatibility, maintenance health, and existing assets in `%LOCALAPPDATA%\SharedLibraries` / `ecosystem-registry.json`, and noting `THIRD_PARTY_NOTICES.md` attribution), and (2) comparable established apps to identify natural surrounding **lateral/companion features** and UX expectations (see `AUDITS.md` Modules 13 & 14 for deep-dive criteria). Surface Build vs. Reuse/Fork/Bridge as `[Pick One]` and optional lateral/companion features as `[Pick Any]` right inside the Path B gate so the user can cherry-pick what to build now vs. park in `docs/PRODUCT.md` Wishlist.
+  - **Proactive OSS Reuse & Lateral Feature Check (New Features, Subsystems & Apps):** Before proposing a Path B plan for any new feature, subsystem, or app (skipped on Path A micro-fixes), proactively check: (1) existing open-source or source-available libraries, plugins, or apps we can adopt, fork, customize, bridge, or borrow UI/architecture patterns from (checking license compatibility, maintenance health, and existing assets in `%LOCALAPPDATA%\SharedLibraries` / `ecosystem-registry.json`, and noting `THIRD_PARTY_NOTICES.md` attribution), and (2) comparable established apps to identify natural surrounding **lateral/companion features** and UX expectations (see `AUDITS.md` Modules 13 & 14 for deep-dive criteria). Surface Build vs. Reuse/Fork/Bridge as `[Pick One]` and optional lateral/companion features as `[Multiple]` right inside the relevant NATO topic block so the user can cherry-pick what to build now vs. park in `docs/PRODUCT.md` Wishlist.
 
-  **Required Path B Template:**
+  **Required Path B Template (Single Merged Agenda — No Separate Report Above):**
   ```markdown
   **ALPHA — [Short Topic Name]**
-  * **What I understood:** [1–2 plain-English sentences restating intent.]
-  * **`[Yes / No]` — Alpha:** [Clear binary question in simple English?]
+  * **Findings & Plan:** [Concise plain-English intent, findings, or proposed changes for this topic.]
+  * **`[Yes / No]` — Alpha:** [Clear do/don't question in simple English?]
 
   **BRAVO — [Short Topic Name]**
-  * **What I understood:** [1–2 plain-English sentences restating intent.]
-  * **`[Pick One]` — [Question in simple English?]**
+  * **Findings & Plan:** [Concise plain-English intent, findings, or proposed changes for this topic.]
+  * **`[Pick One]` — [Single-choice question in simple English?]**
     * **Bravo 1 *(recommended)*:** [Option name] — [What this means in practice.]
     * **Bravo 2:** [Option name] — [What this means in practice.]
-  * **`[Pick Any]` — [Optional extras?]**
+  * **`[Multiple]` — [Multi-choice optional extras?]**
     * **Bravo 3:** [Option name] — [Simple explanation.]
-  *(Use **`[Confirm]` — [Topic]:** when no choices are needed.)*
+    * **Bravo 4:** [Option name] — [Simple explanation.]
+
+  **CHARLIE — [Short Topic Name]**
+  * **Findings & Plan:** [Concise plain-English summary of a straightforward item with no open choices.]
+  * **`[Confirm]` — Charlie:** [Short reconfirmation prompt?]
   ```
 
 - **Path C: On-Demand Visual Preview Path (Strictly on Request):** Only generate visual previews when explicitly asked for a preview or visual example.
