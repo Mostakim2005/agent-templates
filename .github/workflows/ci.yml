@@ -144,7 +144,10 @@ jobs:
                   if in_fence or line.startswith("### ["):
                       continue
                   for rm in ref_re.finditer(line):
-                      tag_id = f"{rm.group(1)}: {rm.group(2)}"
+                      slug = rm.group(2)
+                      if slug == "Slug" or "<" in slug:
+                          continue
+                      tag_id = f"{rm.group(1)}: {slug}"
                       if tag_id not in defined_ids:
                           errors.append(
                               f"{md_path}:{idx + 1} broken template cross-link [{tag_id}]"
