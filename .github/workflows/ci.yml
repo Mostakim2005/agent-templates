@@ -13,20 +13,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate-templates:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Validate structure, YAML, filenames, and template headers
+      - name: Prepare CI log directory
+        shell: bash
+        run: mkdir -p .ci-logs
+
+      - name: 1. Validate structure, UTF-8 no-BOM, YAML, cross-links, and anchor rules
+        shell: bash
         run: |
-          mkdir -p .ci-logs
-          set -o pipefail
-          python3 - <<'PY' 2>&1 | tee .ci-logs/validate-templates.log
+          set -eo pipefail
+          echo "FAILED" > .ci-logs/01-validate-templates.status
+          python3 - <<'PY' 2>&1 | tee .ci-logs/01-validate-templates.log
           import pathlib
           import re
+          import subprocess
           import sys
           import yaml
 
@@ -54,11 +60,30 @@ jobs:
               if not (root / name).is_file():
                   errors.append(f"Missing required file: {name}")
 
-          for path in root.rglob("*"):
-              if ".git" in path.parts or ".ci-logs" in path.parts or ".ci-report" in path.parts:
+          tracked = subprocess.run(
+              ["git", "ls-files"], capture_output=True, text=True, check=True
+          ).stdout.splitlines()
+
+          for rel in tracked:
+              p = root / rel
+              if not p.is_file():
                   continue
-              if " " in path.name:
-                  errors.append(f"Filename contains spaces: {path}")
+              if " " in p.name:
+                  errors.append(f"Filename contains spaces: {rel}")
+              raw = p.read_bytes()
+              if raw.startswith(b"\xef\xbb\xbf"):
+                  errors.append(f"UTF-8 BOM detected (must be UTF-8 without BOM): {rel}")
+              try:
+                  decoded = raw.decode("utf-8")
+              except UnicodeDecodeError as exc:
+                  errors.append(f"Invalid UTF-8 encoding in {rel}: {exc}")
+                  continue
+              if p.suffix.lower() == ".ps1":
+                  non_ascii = [i + 1 for i, line in enumerate(decoded.splitlines()) if any(ord(c) > 127 for c in line)]
+                  if non_ascii:
+                      errors.append(
+                          f"{rel} contains non-ASCII characters on line(s) {non_ascii[:5]} (breaks Windows PowerShell 5.1 without BOM)"
+                      )
 
           for yml in [root / ".github/workflows/ci.yml", root / "templates/ci.yml"]:
               if yml.is_file():
@@ -67,82 +92,99 @@ jobs:
                   except Exception as exc:
                       errors.append(f"Invalid YAML in {yml}: {exc}")
 
-          header_re = re.compile(r"^### \[(FEATURE|WISHLIST|SUBSYSTEM|FLOW|DECISION|TRAP): [^\]]+\] \| Aliases: .+")
-          for md_path in sorted((root / "templates").glob("*.md")):
+          header_re = re.compile(
+              r"^### \[(FEATURE|WISHLIST|SUBSYSTEM|FLOW|DECISION|TRAP): ([^\]]+)\] \| Aliases: .+\S"
+          )
+          ref_re = re.compile(r"\[(FEATURE|WISHLIST|SUBSYSTEM|FLOW|DECISION|TRAP): ([^\]]+)\]")
+          legacy_bullet_re = re.compile(r"^\s*[-*]\s+`[^`\n]+?\.[A-Za-z0-9_+-]+`\s*->\s*`")
+
+          defined_ids = {}
+          template_docs = [
+              root / "templates/PRODUCT.md",
+              root / "templates/ARCHITECTURE.md",
+              root / "templates/DECISIONS_AND_TRAPS.md",
+          ]
+
+          for md_path in template_docs:
+              if not md_path.is_file():
+                  continue
               lines = md_path.read_text(encoding="utf-8").splitlines()
+              in_fence = False
               for idx, line in enumerate(lines):
+                  if line.lstrip().startswith("```"):
+                      in_fence = not in_fence
+                      continue
+                  if in_fence:
+                      continue
                   if line.startswith("### ["):
-                      if not header_re.match(line):
+                      m = header_re.match(line)
+                      if not m:
                           errors.append(f"{md_path}:{idx + 1} invalid header format: {line}")
+                      else:
+                          defined_ids[f"{m.group(1)}: {m.group(2)}"] = f"{md_path}:{idx + 1}"
                       next_line = lines[idx + 1] if idx + 1 < len(lines) else ""
                       if not next_line.startswith("> **1-Line Summary:**"):
-                          errors.append(f"{md_path}:{idx + 2} missing immediate '> **1-Line Summary:**' after header")
+                          errors.append(
+                              f"{md_path}:{idx + 2} missing immediate '> **1-Line Summary:**' after header"
+                          )
+                  if legacy_bullet_re.match(line):
+                      errors.append(
+                          f"{md_path}:{idx + 1} uses legacy '->' code anchor instead of '::': {line}"
+                      )
+
+          for md_path in [*template_docs, root / "templates/PROJECT_AGENTS.md"]:
+              if not md_path.is_file():
+                  continue
+              lines = md_path.read_text(encoding="utf-8").splitlines()
+              in_fence = False
+              for idx, line in enumerate(lines):
+                  if line.lstrip().startswith("```"):
+                      in_fence = not in_fence
+                      continue
+                  if in_fence or line.startswith("### ["):
+                      continue
+                  for rm in ref_re.finditer(line):
+                      tag_id = f"{rm.group(1)}: {rm.group(2)}"
+                      if tag_id not in defined_ids:
+                          errors.append(
+                              f"{md_path}:{idx + 1} broken template cross-link [{tag_id}]"
+                          )
+
+          product_text = (root / "templates/PRODUCT.md").read_text(encoding="utf-8")
+          if "**Verified By:**" not in product_text:
+              errors.append("templates/PRODUCT.md is missing '**Verified By:**' test anchor field")
+
+          agents_text = (root / "AGENTS.md").read_text(encoding="utf-8")
+          for ref_file in [
+              "AUDITS.md",
+              "UIUX.md",
+              "sync-all.ps1",
+              "extract-prefs.ps1",
+              "run-sync.bat",
+              "run-extract.bat",
+              "templates/PRODUCT.md",
+              "templates/ARCHITECTURE.md",
+              "templates/DECISIONS_AND_TRAPS.md",
+              "templates/local-ci.ps1",
+              "templates/ci.yml",
+          ]:
+              leaf = pathlib.Path(ref_file).name
+              if leaf not in agents_text:
+                  errors.append(f"AGENTS.md no longer references expected file: {ref_file}")
 
           if errors:
               print("\n".join(errors), file=sys.stderr)
               sys.exit(1)
-          print("All template, YAML, and header checks passed.")
+          print(
+              f"All template, UTF-8 no-BOM, ASCII PowerShell, YAML, cross-link ({len(defined_ids)} IDs), and anchor checks passed."
+          )
           PY
+          echo "PASSED" > .ci-logs/01-validate-templates.status
 
-      - name: Generate patch-ready CI failure report (validate-templates)
-        if: failure()
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import datetime, os, pathlib, subprocess
-          report_dir = pathlib.Path(".ci-report")
-          report_dir.mkdir(exist_ok=True)
-          report_path = report_dir / "Agent Templates - CI Failure Report (Validate Templates).md"
-          sha = os.environ.get("GITHUB_SHA", "unknown")
-          branch = os.environ.get("GITHUB_REF_NAME", "unknown")
-          run_url = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
-          log_text = pathlib.Path(".ci-logs/validate-templates.log").read_text(encoding="utf-8", errors="replace") if pathlib.Path(".ci-logs/validate-templates.log").is_file() else "(no log captured)"
-          diff_stat = subprocess.run(["git", "show", "--stat", "--no-color", "--format=", "HEAD"], capture_output=True, text=True).stdout.strip()
-          body = "\n".join([
-              "# Agent Templates - CI Failure Report (Validate Templates)",
-              "",
-              f"- **Repository:** `{os.environ.get('GITHUB_REPOSITORY', '')}`",
-              f"- **Branch / Commit:** `{branch}` / `{sha[:8]}`",
-              f"- **Workflow Run:** {run_url}",
-              f"- **Generated:** {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
-              "",
-              "## Failing Output",
-              "```text",
-              log_text.strip(),
-              "```",
-              "",
-              "## Triggering Commit (`git show --stat`)",
-              "```text",
-              diff_stat or "(none)",
-              "```",
-          ]) + "\n"
-          report_path.write_text(body, encoding="utf-8")
-          if os.environ.get("GITHUB_STEP_SUMMARY"):
-              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:
-                  fh.write(body)
-          PY
-
-      - name: Upload failure report artifact
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-failure-report-validate-templates
-          path: .ci-report/*.md
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
-
-  lint-powershell:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Lint PowerShell scripts with PSScriptAnalyzer
+      - name: 2. Lint PowerShell scripts with PSScriptAnalyzer
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path .ci-logs -Force | Out-Null
+          "FAILED" | Set-Content -Path .ci-logs/02-lint-powershell.status -NoNewline
           if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
             Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
             Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
@@ -150,42 +192,89 @@ jobs:
           $results = @('./sync-all.ps1', './extract-prefs.ps1', './templates/local-ci.ps1') | Invoke-ScriptAnalyzer -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost, PSUseSingularNouns, PSUseBOMForUnicodeEncodedFile
           if ($results) {
             $formatted = ($results | Format-Table -AutoSize | Out-String)
-            $formatted | Set-Content -Path .ci-logs/lint-powershell.log -Encoding UTF8
+            $formatted | Set-Content -Path .ci-logs/02-lint-powershell.log -Encoding UTF8
             Write-Host $formatted
             exit 1
           }
-          "PSScriptAnalyzer passed with no warnings or errors." | Tee-Object -FilePath .ci-logs/lint-powershell.log
+          "PSScriptAnalyzer passed with no warnings or errors." | Tee-Object -FilePath .ci-logs/02-lint-powershell.log
+          "PASSED" | Set-Content -Path .ci-logs/02-lint-powershell.status -NoNewline
 
-      - name: Generate patch-ready CI failure report (lint-powershell)
+      - name: Generate patch-ready CI failure report
         if: failure()
         shell: bash
         run: |
           python3 - <<'PY'
-          import datetime, os, pathlib, subprocess
+          import datetime
+          import os
+          import pathlib
+          import subprocess
+
           report_dir = pathlib.Path(".ci-report")
           report_dir.mkdir(exist_ok=True)
-          report_path = report_dir / "Agent Templates - CI Failure Report (Lint PowerShell).md"
+          report_path = report_dir / "Agent Templates - CI Failure Report.md"
           sha = os.environ.get("GITHUB_SHA", "unknown")
           branch = os.environ.get("GITHUB_REF_NAME", "unknown")
-          run_url = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
-          log_text = pathlib.Path(".ci-logs/lint-powershell.log").read_text(encoding="utf-8", errors="replace") if pathlib.Path(".ci-logs/lint-powershell.log").is_file() else "(no log captured)"
-          diff_stat = subprocess.run(["git", "show", "--stat", "--no-color", "--format=", "HEAD"], capture_output=True, text=True).stdout.strip()
+          run_url = (
+              f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/"
+              f"{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
+          )
+          commit_msg = subprocess.run(
+              ["git", "log", "-1", "--pretty=%s"], capture_output=True, text=True
+          ).stdout.strip()
+          diff_stat = subprocess.run(
+              ["git", "show", "--stat", "--no-color", "--format=", "HEAD"],
+              capture_output=True,
+              text=True,
+          ).stdout.strip()
+          diff_patch = subprocess.run(
+              ["git", "show", "--no-color", "--format=", "HEAD"],
+              capture_output=True,
+              text=True,
+          ).stdout.strip()
+          if len(diff_patch) > 12000:
+              diff_patch = diff_patch[:12000] + "\n... [diff truncated] ..."
+
+          stages = [
+              ("01-validate-templates", "01 Validate Structure, UTF-8, YAML & Cross-Links"),
+              ("02-lint-powershell", "02 Lint PowerShell Scripts (PSScriptAnalyzer)"),
+          ]
+          ledger = []
+          failed_logs = []
+          for key, label in stages:
+              sf = pathlib.Path(f".ci-logs/{key}.status")
+              lf = pathlib.Path(f".ci-logs/{key}.log")
+              status = sf.read_text(encoding="utf-8").strip() if sf.is_file() else "NOT RUN"
+              ledger.append(f"| {label} | `{status}` |")
+              if status == "FAILED":
+                  txt = lf.read_text(encoding="utf-8", errors="replace").strip() if lf.is_file() else "(no log captured)"
+                  failed_logs.extend([f"### {label} (`{key}.log`)", "```text", txt, "```", ""])
+
           body = "\n".join([
-              "# Agent Templates - CI Failure Report (Lint PowerShell)",
+              "# Agent Templates - CI Failure Report",
               "",
-              f"- **Repository:** `{os.environ.get('GITHUB_REPOSITORY', '')}`",
-              f"- **Branch / Commit:** `{branch}` / `{sha[:8]}`",
-              f"- **Workflow Run:** {run_url}",
-              f"- **Generated:** {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+              "## Metadata",
+              "| Field | Value |",
+              "| :--- | :--- |",
+              f"| **Repository** | `{os.environ.get('GITHUB_REPOSITORY', '')}` (`Agent Templates`) |",
+              f"| **Branch / Commit** | `{branch}` / `{sha[:8]}` — {commit_msg} |",
+              f"| **Workflow Run** | {run_url} |",
+              f"| **Generated** | {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')} |",
               "",
-              "## Failing Output",
-              "```text",
-              log_text.strip(),
-              "```",
+              "## Stage Ledger",
+              "| Stage | Status |",
+              "| :--- | :--- |",
+              *ledger,
               "",
+              "## Failing Stage Output",
+              *(failed_logs or ["_Failed outside tracked stages; inspect Workflow Run URL above._", ""]),
               "## Triggering Commit (`git show --stat`)",
               "```text",
               diff_stat or "(none)",
+              "```",
+              "",
+              "## Triggering Commit Diff Excerpt",
+              "```diff",
+              diff_patch or "(none)",
               "```",
           ]) + "\n"
           report_path.write_text(body, encoding="utf-8")
@@ -194,11 +283,11 @@ jobs:
                   fh.write(body)
           PY
 
-      - name: Upload failure report artifact
+      - name: Upload patch-ready CI failure report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ci-failure-report-lint-powershell
+          name: ci-failure-report
           path: .ci-report/*.md
           include-hidden-files: true
           if-no-files-found: error

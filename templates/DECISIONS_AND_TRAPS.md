@@ -1,17 +1,16 @@
-# Architectural Decisions, Pivots & Landmines (`DECISIONS_AND_TRAPS.md`)
-> **1-Line Summary:** Records why we chose specific approaches, what failed when we tried other ways, who made the decision, and full explanations of critical code traps never to touch. *(Keep only 1-line warning pointers in the project's root `AGENTS.md`; put full details and code anchors here.)*
+# Architectural Decisions, Waivers & Landmines (`DECISIONS_AND_TRAPS.md`)
+> **1-Line Summary:** Records architectural pivots, intentional audit/UI waivers, who made each choice, and critical engineering traps never to touch. *(Keep 1-line `[TRAP: <Slug>]` pointers in root `AGENTS.md` and implementation anchors in `docs/ARCHITECTURE.md`.)*
 
-## 1. Architectural Decisions & Pivot History
+## 1. Architectural Decisions, Pivots & Audit Waivers
 
-### [DECISION: Descriptive-Choice-Name] | Aliases: feature name, alternative rejected, keywords
-> **1-Line Summary:** [What we decided to do and what failed approach it replaced.]
-* **Decision Maker:** `[DECIDED BY: HUMAN]` (or `[DECIDED BY: AGENT - Approved by Human]`)
-* **Original User Intention:** [What the user wanted to achieve]
+### [DECISION: Descriptive-Choice-Name] | Aliases: feature name, rejected alternative, waiver keywords
+> **1-Line Summary:** [What we decided (or intentionally waived) and what failed or rejected approach it replaced.]
+* **Links:** `[FEATURE: Descriptive-Feature-Name]`, `[FLOW: Descriptive-Feature-Flow-Name]`
+* **Decision Maker:** `[DECIDED BY: HUMAN]` *(or `[DECIDED BY: AGENT - Approved by Human]`)*
 * **Options Considered:**
-  * **Option A (Rejected):** [What it was and why it failed or was rejected]
-  * **Option B (Chosen):** [What we implemented and why it works]
-* **Plain-English Summary of Pivot:** [1–2 simple sentences explaining why the old path broke and how the new path avoids it.]
-* **Visual Pivot Map (What Failed vs. What Works):**
+  * **Rejected / Waived:** [Failed path, rejected OSS library, or waived UI surface (`N/A — Cumbersome` / `N/A — Conflicting`) and why]
+  * **Chosen:** [Active architecture or lean surface kept, and why it works safely]
+* **Visual Pivot Map (Include for Architectural Flow Pivots):**
 
 ```mermaid
 flowchart LR
@@ -33,16 +32,14 @@ flowchart LR
     end
 ```
 
-* **Code Anchors (Grep Targets):**
-  * `src/path/file.ts` -> `implementedFunctionName`
-
 ---
 
 ## 2. Do-Not-Touch Engineering Landmines (Traps)
 
 ### [TRAP: Descriptive-Trap-Name] | Aliases: bug symptom, broken behavior, file name
 > **1-Line Summary:** [Strict rule on what NOT to change, and what breaks if you do.]
-* **Strict Rule:** **NEVER** [state exact action to avoid, e.g., move script X into `index.html`].
-* **Why This Trap Exists (Plain English):** [Explain the hidden interaction, e.g., Electron resets plugin arrays during async startup, or Windows OS dark mode inverts SVG CSS `light-dark()` colors.]
-* **Protected Code Anchors (Grep Targets):**
-  * `src/path/file.ts` -> `protectedFunctionOrGuardName`
+* **Links:** `[SUBSYSTEM: Descriptive-Mechanism-Name]`, `[FLOW: Descriptive-Feature-Flow-Name]`
+* **Strict Rule:** **NEVER** [state exact action to avoid, e.g., bind server to `0.0.0.0` or skip atomic temp-file writes].
+* **Why This Trap Exists (Plain English):** [Explain the hidden OS, framework, or concurrency interaction discovered during development or an audit.]
+* **Protected Code Anchors:**
+  * `src/path/file.ts :: protectedFunctionOrGuardName`

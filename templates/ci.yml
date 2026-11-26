@@ -14,101 +14,347 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest # Switch to windows-latest for Windows-only apps (WPF/WinForms/PowerShell)
+    runs-on: ubuntu-latest # Switch to windows-latest for Windows-only apps (Win32/WPF/WinForms/PowerShell)
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      # Add runtime setup here (e.g., actions/setup-node@v4, actions/setup-python@v5, actions/setup-dotnet@v4)
+      # Add runtime setup here (e.g., actions/setup-node@v4, actions/setup-python@v5, actions/setup-go@v5)
 
       - name: Prepare CI log directory
+        shell: bash
         run: mkdir -p .ci-logs
 
       - name: 1. Install dependencies
+        shell: bash
         run: |
-          set -o pipefail
-          echo "Replace with stack install command (e.g., npm ci)" 2>&1 | tee .ci-logs/01-install.log
+          set -eo pipefail
+          echo "FAILED" > .ci-logs/01-install.status
+          echo "[SKIP] Replace with stack install command (e.g., npm ci)" 2>&1 | tee .ci-logs/01-install.log
+          echo "PASSED" > .ci-logs/01-install.status
 
       - name: 2. Format & Lint
+        shell: bash
         run: |
-          set -o pipefail
-          echo "Replace with formatter/linter (e.g., npm run lint / ruff check .)" 2>&1 | tee .ci-logs/02-format-lint.log
+          set -eo pipefail
+          echo "FAILED" > .ci-logs/02-format-lint.status
+          echo "[SKIP] Replace with formatter/linter (e.g., npm run lint / ruff check .)" 2>&1 | tee .ci-logs/02-format-lint.log
+          echo "PASSED" > .ci-logs/02-format-lint.status
 
       - name: 3. Static Type Check
+        shell: bash
         run: |
-          set -o pipefail
-          echo "Replace with typechecker (e.g., npx tsc --noEmit / pyright)" 2>&1 | tee .ci-logs/03-typecheck.log
+          set -eo pipefail
+          echo "FAILED" > .ci-logs/03-typecheck.status
+          echo "[SKIP] Replace with typechecker (e.g., npx tsc --noEmit / pyright)" 2>&1 | tee .ci-logs/03-typecheck.log
+          echo "PASSED" > .ci-logs/03-typecheck.status
 
       - name: 4. Unit Tests
+        shell: bash
         run: |
-          set -o pipefail
-          echo "Replace with unit tests (e.g., npm run test:unit / pytest tests/unit)" 2>&1 | tee .ci-logs/04-unit-tests.log
+          set -eo pipefail
+          echo "FAILED" > .ci-logs/04-unit-tests.status
+          echo "[SKIP] Replace with unit tests (e.g., npm run test:unit / pytest tests/unit)" 2>&1 | tee .ci-logs/04-unit-tests.log
+          echo "PASSED" > .ci-logs/04-unit-tests.status
 
       - name: 5. Integration Tests
+        shell: bash
         run: |
-          set -o pipefail
-          echo "Replace with integration tests (e.g., npm run test:integration / pytest tests/integration)" 2>&1 | tee .ci-logs/05-integration-tests.log
+          set -eo pipefail
+          echo "FAILED" > .ci-logs/05-integration-tests.status
+          echo "[SKIP] Replace with integration tests (e.g., npm run test:integration / pytest tests/integration)" 2>&1 | tee .ci-logs/05-integration-tests.log
+          echo "PASSED" > .ci-logs/05-integration-tests.status
 
       - name: 6. E2E & Headless UI Tests (Optional)
+        shell: bash
         run: |
-          set -o pipefail
+          set -eo pipefail
+          echo "FAILED" > .ci-logs/06-e2e-ui-tests.status
           # Example: npx playwright install --with-deps chromium && npx playwright test
-          echo "Replace with E2E/UI tests when project has a UI" 2>&1 | tee .ci-logs/06-e2e-ui-tests.log
+          echo "[SKIP] Replace with E2E/UI tests when project has a UI" 2>&1 | tee .ci-logs/06-e2e-ui-tests.log
+          echo "PASSED" > .ci-logs/06-e2e-ui-tests.status
 
       - name: 7. Security & Secret Scan
+        shell: bash
         run: |
-          set -o pipefail
+          set -eo pipefail
+          echo "FAILED" > .ci-logs/07-security-scan.status
           # Example: npm audit --audit-level=high || pip-audit; add gitleaks/gitleaks-action for secret scanning
-          echo "Replace with dependency audit & secret scan" 2>&1 | tee .ci-logs/07-security-scan.log
+          echo "[SKIP] Replace with dependency audit & secret scan" 2>&1 | tee .ci-logs/07-security-scan.log
+          echo "PASSED" > .ci-logs/07-security-scan.status
 
       - name: 8. Build & Smoke Test
+        shell: bash
         run: |
-          set -o pipefail
-          echo "Replace with build & smoke test (e.g., npm run build)" 2>&1 | tee .ci-logs/08-build-smoke.log
+          set -eo pipefail
+          echo "FAILED" > .ci-logs/08-build-smoke.status
+          echo "[SKIP] Replace with build & smoke test (e.g., npm run build)" 2>&1 | tee .ci-logs/08-build-smoke.log
+          echo "PASSED" > .ci-logs/08-build-smoke.status
 
-      - name: 9. Structure & Doc Parity Checks
+      - name: 9. Structure, UTF-8 & Doc/Anchor Parity Checks
+        shell: bash
         run: |
-          set -o pipefail
-          echo "Replace with YAML/JSON/doc header parity checks" 2>&1 | tee .ci-logs/09-structure-docs.log
+          set -eo pipefail
+          echo "FAILED" > .ci-logs/09-structure-docs.status
+          PYTHON_BIN=$(command -v python3 || command -v python)
+          "$PYTHON_BIN" - <<'PY' 2>&1 | tee .ci-logs/09-structure-docs.log
+          import json
+          import pathlib
+          import re
+          import subprocess
+          import sys
+
+          root = pathlib.Path(".")
+          errors = []
+          warnings = []
+
+          tracked = subprocess.run(
+              ["git", "ls-files"], capture_output=True, text=True, check=True
+          ).stdout.splitlines()
+
+          disposable_re = re.compile(
+              r" - (Local )?CI Failure Report| - (Code|Security|UIUX) Audit", re.IGNORECASE
+          )
+          text_exts = {".json", ".md", ".yml", ".yaml", ".ps1", ".toml"}
+
+          for rel in tracked:
+              p = root / rel
+              if not p.is_file():
+                  continue
+              if rel.startswith((".ci-logs/", ".ci-report/")) or (
+                  p.suffix.lower() == ".md" and disposable_re.search(p.name)
+              ):
+                  errors.append(f"Disposable report or CI artifact committed to git: {rel}")
+              if rel.startswith("docs/") and p.suffix.lower() in {".html", ".htm"}:
+                  errors.append(f"HTML file inside docs/ (move visual previews to preview/): {rel}")
+              if p.suffix.lower() in text_exts:
+                  raw = p.read_bytes()
+                  if raw.startswith(b"\xef\xbb\xbf"):
+                      errors.append(f"UTF-8 BOM detected (must be UTF-8 without BOM): {rel}")
+                  try:
+                      decoded = raw.decode("utf-8")
+                  except UnicodeDecodeError as exc:
+                      errors.append(f"Invalid UTF-8 encoding in {rel}: {exc}")
+                      continue
+                  if p.suffix.lower() == ".json":
+                      try:
+                          json.loads(decoded)
+                      except Exception as exc:
+                          errors.append(f"Invalid JSON in {rel}: {exc}")
+
+          header_re = re.compile(
+              r"^### \[(FEATURE|WISHLIST|SUBSYSTEM|FLOW|DECISION|TRAP): ([^\]]+)\] \| Aliases: .+\S"
+          )
+          ref_re = re.compile(r"\[(FEATURE|WISHLIST|SUBSYSTEM|FLOW|DECISION|TRAP): ([^\]]+)\]")
+          colon_anchor_re = re.compile(
+              r"`([^`\n]+?\.[A-Za-z0-9_+-]+)\s*::\s*([A-Za-z_][A-Za-z0-9_.:$]*)`"
+              r"|`([^`\n]+?\.[A-Za-z0-9_+-]+)`\s*::\s*`([A-Za-z_][A-Za-z0-9_.:$]*)`"
+          )
+          legacy_bullet_re = re.compile(r"^\s*[-*]\s+`([^`\n]+?\.[A-Za-z0-9_+-]+)`\s*->\s*(.+)$")
+          backtick_ident_re = re.compile(r"`([A-Za-z_][A-Za-z0-9_.:$]*)`")
+          placeholder_prefixes = ("src/path/", "path/to/", "tests/feature.test.", "fileA", "fileB")
+
+          def iter_non_fenced_lines(md_file: pathlib.Path):
+              in_fence = False
+              lines = md_file.read_text(encoding="utf-8").splitlines()
+              for idx, line in enumerate(lines):
+                  stripped = line.lstrip()
+                  if stripped.startswith("```"):
+                      in_fence = not in_fence
+                      continue
+                  if not in_fence:
+                      yield idx, line, lines
+
+          defined_ids = {}
+          docs_dir = root / "docs"
+          doc_files = sorted(docs_dir.rglob("*.md")) if docs_dir.is_dir() else []
+
+          for md_path in doc_files:
+              rel = md_path.as_posix()
+              raw_lines = md_path.read_text(encoding="utf-8").splitlines()
+              if md_path.parent == docs_dir and len(raw_lines) > 250:
+                  warnings.append(
+                      f"[WARN] {rel} has {len(raw_lines)} lines (>250); split details into docs/modules/<topic>.md"
+                  )
+              for idx, line, all_lines in iter_non_fenced_lines(md_path):
+                  if line.startswith("### ["):
+                      m = header_re.match(line)
+                      if not m:
+                          errors.append(f"{rel}:{idx + 1} invalid doc header format: {line}")
+                      else:
+                          tag_id = f"{m.group(1)}: {m.group(2)}"
+                          if tag_id in defined_ids:
+                              errors.append(
+                                  f"{rel}:{idx + 1} duplicate [{tag_id}] (already in {defined_ids[tag_id]})"
+                              )
+                          else:
+                              defined_ids[tag_id] = f"{rel}:{idx + 1}"
+                      next_line = all_lines[idx + 1] if idx + 1 < len(all_lines) else ""
+                      if not next_line.startswith("> **1-Line Summary:**"):
+                          errors.append(
+                              f"{rel}:{idx + 2} missing immediate '> **1-Line Summary:**' after header"
+                          )
+
+          scan_targets = list(doc_files)
+          if (root / "AGENTS.md").is_file():
+              scan_targets.append(root / "AGENTS.md")
+
+          file_cache = {}
+
+          def check_anchor(src_rel: str, line_no: int, target_rel: str, symbol_expr: str):
+              norm = target_rel.strip().replace("\\", "/")
+              if norm.startswith(placeholder_prefixes) or any(ch in norm for ch in "<>[]*%$"):
+                  return
+              target_path = root / norm
+              if not target_path.is_file():
+                  errors.append(f"{src_rel}:{line_no} anchor file not found: {norm}")
+                  return
+              if norm not in file_cache:
+                  file_cache[norm] = target_path.read_text(encoding="utf-8", errors="replace")
+              body = file_cache[norm]
+              for part in [p for p in re.split(r"(?:\.|::)+", symbol_expr.strip()) if p]:
+                  if part not in body:
+                      errors.append(
+                          f"{src_rel}:{line_no} anchor symbol '{part}' (from '{symbol_expr}') not found in {norm}"
+                      )
+
+          for md_path in scan_targets:
+              rel = md_path.as_posix()
+              for idx, line, _ in iter_non_fenced_lines(md_path):
+                  if docs_dir.is_dir() and not line.startswith("### ["):
+                      for rm in ref_re.finditer(line):
+                          slug = rm.group(2)
+                          tag_id = f"{rm.group(1)}: {slug}"
+                          if slug == "Slug" or "<" in slug or (slug.startswith("Descriptive-") and tag_id not in defined_ids):
+                              continue
+                          if tag_id not in defined_ids:
+                              errors.append(
+                                  f"{rel}:{idx + 1} broken cross-link [{tag_id}] (not defined in docs/)"
+                              )
+
+                  if re.match(r"^\s*[-*]\s+\*\*Verified By:\*\*\s*(.*)$", line):
+                      val = re.sub(r"^\s*[-*]\s+\*\*Verified By:\*\*\s*", "", line).strip()
+                      if not val:
+                          errors.append(f"{rel}:{idx + 1} empty 'Verified By:' field")
+
+                  for cm in colon_anchor_re.finditer(line):
+                      f_path = cm.group(1) or cm.group(3)
+                      sym = cm.group(2) or cm.group(4)
+                      check_anchor(rel, idx + 1, f_path, sym)
+
+                  lm = legacy_bullet_re.match(line)
+                  if lm:
+                      f_path = lm.group(1)
+                      for sm in backtick_ident_re.finditer(lm.group(2)):
+                          check_anchor(rel, idx + 1, f_path, sm.group(1))
+
+          for w in warnings:
+              print(w)
+          if errors:
+              print("\n".join(errors), file=sys.stderr)
+              sys.exit(1)
+          print(
+              f"Structure, UTF-8, cross-link ({len(defined_ids)} doc node(s)), and code/test anchor checks passed."
+          )
+          PY
+          echo "PASSED" > .ci-logs/09-structure-docs.status
 
       - name: Generate patch-ready CI failure report
         if: failure()
         shell: bash
         run: |
-          python3 - <<'PY'
+          PYTHON_BIN=$(command -v python3 || command -v python)
+          "$PYTHON_BIN" - <<'PY'
           import datetime
           import os
           import pathlib
           import re
           import subprocess
 
+          def resolve_repo_title(repo_slug: str) -> str:
+              agents_md = pathlib.Path("AGENTS.md")
+              if agents_md.is_file():
+                  for line in agents_md.read_text(encoding="utf-8", errors="replace").splitlines():
+                      m = re.match(r"^\s*[-*]\s+\*\*Project Name:\*\*\s*(.+)$", line)
+                      if m:
+                          raw_val = re.sub(r"\s*\(`[^`]+`\)\s*$", "", m.group(1)).strip().strip("`")
+                          if raw_val and not raw_val.startswith("["):
+                              return raw_val
+              if "-" not in repo_slug and "_" not in repo_slug and any(c.isupper() for c in repo_slug[1:]):
+                  return repo_slug
+              parts = [w for w in re.split(r"[-_\s]+", repo_slug) if w]
+              titled = [
+                  w if any(c.isupper() for c in w[1:]) else (w[0].upper() + w[1:])
+                  for w in parts
+              ]
+              return " ".join(titled) if titled else repo_slug
+
           repo_slug = os.environ.get("GITHUB_REPOSITORY", "unknown/repo").split("/")[-1]
-          repo_title = " ".join(w.capitalize() for w in re.split(r"[-_]+", repo_slug) if w) or repo_slug
+          repo_title = resolve_repo_title(repo_slug)
           report_dir = pathlib.Path(".ci-report")
           report_dir.mkdir(exist_ok=True)
-          report_name = f"{repo_title} - CI Failure Report.md"
-          report_path = report_dir / report_name
+          report_path = report_dir / f"{repo_title} - CI Failure Report.md"
 
           def run_cmd(cmd):
-              proc = subprocess.run(cmd, capture_output=True, text=True)
-              return proc.stdout.strip()
+              return subprocess.run(cmd, capture_output=True, text=True).stdout.strip()
 
           branch = os.environ.get("GITHUB_REF_NAME", "unknown")
           sha = os.environ.get("GITHUB_SHA", "unknown")
           short_sha = sha[:8]
-          run_url = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
+          run_url = (
+              f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/"
+              f"{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
+          )
           timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
           commit_msg = run_cmd(["git", "log", "-1", "--pretty=%s"])
           diff_stat = run_cmd(["git", "show", "--stat", "--no-color", "--format=", "HEAD"])
           diff_patch = run_cmd(["git", "show", "--no-color", "--format=", "HEAD"])
           if len(diff_patch) > 12000:
-              diff_patch = diff_patch[:12000] + "\n... [diff truncated for size; inspect full commit in repo] ..."
+              diff_patch = diff_patch[:12000] + "\n... [diff truncated; inspect full commit in repo] ..."
+
+          stage_catalog = [
+              ("01-install", "01 Install Dependencies"),
+              ("02-format-lint", "02 Format & Lint"),
+              ("03-typecheck", "03 Static Type Check"),
+              ("04-unit-tests", "04 Unit Tests"),
+              ("05-integration-tests", "05 Integration Tests"),
+              ("06-e2e-ui-tests", "06 E2E & UI Tests"),
+              ("07-security-scan", "07 Security & Secret Scan"),
+              ("08-build-smoke", "08 Build & Smoke Test"),
+              ("09-structure-docs", "09 Structure, UTF-8 & Doc Parity"),
+          ]
 
           log_dir = pathlib.Path(".ci-logs")
-          log_files = sorted(log_dir.glob("*.log")) if log_dir.is_dir() else []
-          last_log_name = log_files[-1].name if log_files else "none"
+          ledger_rows = []
+          failed_logs = []
+          failed_names = []
+
+          for key, label in stage_catalog:
+              status_file = log_dir / f"{key}.status"
+              log_file = log_dir / f"{key}.log"
+              log_body = (
+                  log_file.read_text(encoding="utf-8", errors="replace").strip()
+                  if log_file.is_file()
+                  else ""
+              )
+              if not status_file.is_file():
+                  status = "NOT RUN"
+              else:
+                  raw_status = status_file.read_text(encoding="utf-8", errors="replace").strip()
+                  if raw_status == "PASSED" and log_body.startswith("[SKIP] Replace with"):
+                      status = "SKIPPED (unconfigured)"
+                  else:
+                      status = raw_status
+              ledger_rows.append(f"| {label} | `{status}` |")
+              if status == "FAILED":
+                  failed_names.append(label)
+                  if len(log_body) > 12000:
+                      log_body = "... [earlier output truncated] ...\n" + log_body[-12000:]
+                  failed_logs.append((label, f"{key}.log", log_body or "(no output captured)"))
+
+          failed_summary = ", ".join(failed_names) if failed_names else "Pre-stage setup / runner step"
 
           sections = [
               f"# {repo_title} - CI Failure Report",
@@ -120,42 +366,44 @@ jobs:
               f"| **Branch / Ref** | `{branch}` |",
               f"| **Commit** | `{short_sha}` (`{sha}`) — {commit_msg} |",
               f"| **Job** | `{os.environ.get('GITHUB_JOB', 'verify')}` |",
-              f"| **Last Executed Stage Log** | `{last_log_name}` |",
+              f"| **Failed Stage(s)** | `{failed_summary}` |",
               f"| **Workflow Run** | {run_url} |",
               f"| **Generated** | {timestamp} |",
               "",
-              "## Triggering Commit Summary (`git show --stat`)",
-              "```text",
-              diff_stat or "(no diff stat available)",
-              "```",
+              "## Stage Ledger",
+              "| Stage | Status |",
+              "| :--- | :--- |",
+              *ledger_rows,
               "",
-              "## Stage Logs (Most Recent Last)",
+              "## Failing Stage Output",
           ]
 
-          if not log_files:
-              sections.append("_No stage logs were captured before failure. Check the workflow run URL above._")
+          if not failed_logs:
+              sections.append("_Failure occurred outside tracked stages; inspect the Workflow Run URL above._")
           else:
-              for lf in log_files:
-                  content = lf.read_text(encoding="utf-8", errors="replace").strip()
-                  if len(content) > 8000:
-                      content = "... [earlier output truncated] ...\n" + content[-8000:]
+              for label, fname, body in failed_logs:
                   sections.extend([
-                      f"### `{lf.name}`",
+                      f"### {label} (`{fname}`)",
                       "```text",
-                      content or "(empty)",
+                      body,
                       "```",
                       "",
                   ])
 
           sections.extend([
+              "## Triggering Commit Summary (`git show --stat`)",
+              "```text",
+              diff_stat or "(no diff stat available)",
+              "```",
+              "",
               "## Triggering Commit Diff Excerpt",
               "```diff",
               diff_patch or "(no diff available)",
               "```",
               "",
               "## Git-Patch Handoff Checklist",
-              "- Identify exact failing file paths and symbols (`path/to/file.ext :: symbolName`) from the failing stage log above.",
-              "- Verify root cause against the triggering commit diff and current repository files.",
+              "- Identify exact failing file paths and symbols (`path/to/file.ext :: symbolName`) from the failing stage output above.",
+              "- Verify root cause against the triggering commit diff and live repository files.",
               "- Generate minimal, verified `.patch` file(s) (`git apply --check`) targeting the exact failing symbols.",
           ])
 

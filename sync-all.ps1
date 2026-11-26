@@ -18,11 +18,13 @@
   - Creates Windows symbolic links pointing every harness directly to Master AGENTS.md (true single source of truth).
   - If symlink creation is blocked (no Admin rights and Windows Developer Mode is off), falls back cleanly to
     writing an exact UTF-8 (no BOM) copy and prints a 1-line tip.
-  - Commits, pulls with rebase, and pushes non-interactively (GIT_TERMINAL_PROMPT=0) with exit-code verification.
+  - Generates an accurate scope-aware commit message (or uses -CommitMessage), pulls with rebase, and pushes
+    non-interactively (GIT_TERMINAL_PROMPT=0) with exit-code verification.
 #>
 [CmdletBinding()]
 param(
     [string]$TemplatesDir,
+    [string]$CommitMessage,
     [switch]$NoGitPush,
     [switch]$CopyOnly
 )
@@ -106,6 +108,56 @@ function Invoke-Git([string[]]$GitArgs) {
     return $output
 }
 
+function Get-AutoCommitMessage([string[]]$StatusLines, [int]$RescuedCount) {
+    $changedPaths = New-Object System.Collections.Generic.List[string]
+    $scopes = New-Object System.Collections.Generic.List[string]
+
+    foreach ($raw in $StatusLines) {
+        $line = "$raw"
+        if ($line.Length -lt 4) { continue }
+        $pathPart = $line.Substring(3).Trim().Trim('"')
+        if ($pathPart -match ' -> ') {
+            $pathPart = ($pathPart -split ' -> ')[-1].Trim().Trim('"')
+        }
+        $norm = $pathPart -replace '\\', '/'
+        if (-not $changedPaths.Contains($norm)) {
+            $changedPaths.Add($norm)
+        }
+
+        $scope = if ($norm -eq 'AGENTS.md') {
+            'agents'
+        } elseif ($norm -eq 'AUDITS.md' -or $norm -eq 'UIUX.md') {
+            'audits'
+        } elseif ($norm.StartsWith('templates/')) {
+            'templates'
+        } elseif ($norm.StartsWith('.github/')) {
+            'ci'
+        } elseif ($norm.EndsWith('.ps1') -or $norm.EndsWith('.bat')) {
+            'sync'
+        } else {
+            'repo'
+        }
+        if (-not $scopes.Contains($scope)) {
+            $scopes.Add($scope)
+        }
+    }
+
+    $scopeTag = if ($scopes.Count -gt 0) { ($scopes -join ',') } else { 'agents' }
+    if ($changedPaths.Count -eq 1 -and $changedPaths[0] -eq 'AGENTS.md') {
+        if ($RescuedCount -gt 0) {
+            return "chore(agents): rescue $RescuedCount Section 8 pref(s) and sync AGENTS.md"
+        }
+        return 'chore(agents): sync AGENTS.md across all agent harnesses'
+    }
+
+    $preview = @($changedPaths | Select-Object -First 4) -join ', '
+    $suffix = if ($changedPaths.Count -gt 4) { " (+$($changedPaths.Count - 4) more)" } else { '' }
+    if ($RescuedCount -gt 0) {
+        return "chore($scopeTag): rescue $RescuedCount pref(s) and sync $preview$suffix"
+    }
+    return "chore($scopeTag): sync $preview$suffix"
+}
+
 # Step 1: Rescue any unique Section 8 preferences from detached/non-symlink harness copies
 $masterPrefs = Get-Section8Pref $masterPath
 $rescuedPrefs = New-Object System.Collections.Generic.List[string]
@@ -178,21 +230,21 @@ if ($symlinkFallbackHit) {
 
 # Step 3: Non-interactive Git commit, rebase, and push
 if (-not $NoGitPush) {
-    $gitStatus = Invoke-Git @('status', '--porcelain')
-    if ($gitStatus) {
-        Write-Host "[GIT] Committing and pushing changes to GitHub..." -ForegroundColor Yellow
-        Invoke-Git @('add', '-A') | Out-Null
-        $commitMsg = if ($rescuedPrefs.Count -gt 0) {
-            "chore(agents): rescue $($rescuedPrefs.Count) Section 8 pref(s) and sync AGENTS.md"
+    $gitStatus = @(Invoke-Git @('status', '--porcelain'))
+    if ($gitStatus.Count -gt 0) {
+        $resolvedMsg = if ($CommitMessage) {
+            $CommitMessage
         } else {
-            "chore(agents): sync AGENTS.md across all agent harnesses"
+            Get-AutoCommitMessage -StatusLines $gitStatus -RescuedCount $rescuedPrefs.Count
         }
-        Invoke-Git @('commit', '-m', $commitMsg) | Out-Null
+        Write-Host "[GIT] Committing ($resolvedMsg) and pushing to GitHub..." -ForegroundColor Yellow
+        Invoke-Git @('add', '-A') | Out-Null
+        Invoke-Git @('commit', '-m', $resolvedMsg) | Out-Null
         Invoke-Git @('pull', '--rebase', 'origin', 'main') | Out-Null
         Invoke-Git @('push', 'origin', 'main') | Out-Null
-        Write-Host "[GIT] Successfully pushed to origin main." -ForegroundColor Green
+        Write-Host '[GIT] Successfully pushed to origin main.' -ForegroundColor Green
     } else {
-        Write-Host "[GIT] Master repository working tree clean. Everything up to date." -ForegroundColor Gray
+        Write-Host '[GIT] Master repository working tree clean. Everything up to date.' -ForegroundColor Gray
     }
 }
 
