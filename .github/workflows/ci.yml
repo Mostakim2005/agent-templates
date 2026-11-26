@@ -55,6 +55,10 @@ jobs:
               "templates/PROJECT_AGENTS.md",
               "templates/ci.yml",
               "templates/local-ci.ps1",
+              "skills/code-audit/SKILL.md",
+              "skills/uiux-audit/SKILL.md",
+              "skills/repo-bootstrap/SKILL.md",
+              "skills/pref-consolidator/SKILL.md",
           ]
           for name in required:
               if not (root / name).is_file():
@@ -170,10 +174,32 @@ jobs:
               "templates/DECISIONS_AND_TRAPS.md",
               "templates/local-ci.ps1",
               "templates/ci.yml",
+              "skills/code-audit/SKILL.md",
+              "skills/uiux-audit/SKILL.md",
+              "skills/repo-bootstrap/SKILL.md",
+              "skills/pref-consolidator/SKILL.md",
           ]:
               leaf = pathlib.Path(ref_file).name
-              if leaf not in agents_text:
+              if leaf not in agents_text and ref_file not in agents_text:
                   errors.append(f"AGENTS.md no longer references expected file: {ref_file}")
+
+          for skill_md in sorted((root / "skills").glob("*/SKILL.md")):
+              s_text = skill_md.read_text(encoding="utf-8")
+              fm_match = re.match(r"^---\n(.*?)\n---\n", s_text, re.DOTALL)
+              if not fm_match:
+                  errors.append(f"{skill_md} missing valid YAML frontmatter block")
+                  continue
+              try:
+                  fm = yaml.safe_load(fm_match.group(1))
+              except Exception as exc:
+                  errors.append(f"{skill_md} invalid YAML frontmatter: {exc}")
+                  continue
+              expected_name = skill_md.parent.name
+              if not isinstance(fm, dict) or fm.get("name") != expected_name:
+                  errors.append(f"{skill_md} frontmatter name '{fm.get('name') if isinstance(fm, dict) else None}' must match directory '{expected_name}'")
+              desc = fm.get("description") if isinstance(fm, dict) else ""
+              if not isinstance(desc, str) or len(desc.strip()) < 20:
+                  errors.append(f"{skill_md} frontmatter description is missing or too short")
 
           if errors:
               print("\n".join(errors), file=sys.stderr)

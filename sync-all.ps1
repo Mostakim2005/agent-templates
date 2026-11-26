@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Symlink-first synchronization for master AGENTS.md across all AI agent harnesses with Section 8 rescue and safe Git push.
+  Symlink-first synchronization for master AGENTS.md and companion skills across AI agent harnesses with Section 8 rescue and safe Git push.
 
 .DESCRIPTION
   Links (or copies as fallback when run without Admin/Developer Mode) master AGENTS.md to:
@@ -12,14 +12,13 @@
   6. Codex / ChatGPT   : %USERPROFILE%\.codex\AGENTS.md
   7. Freebuff          : %USERPROFILE%\.AGENTS.md
 
-  How It Works:
-  - Before linking/updating, scans any non-symlink (detached) harness file for new Section 8 `- [PREF: ...]`
-    entries not yet in Master and rescues them into Master AGENTS.md so no preferences are lost.
-  - Creates Windows symbolic links pointing every harness directly to Master AGENTS.md (true single source of truth).
-  - If symlink creation is blocked (no Admin rights and Windows Developer Mode is off), falls back cleanly to
-    writing an exact UTF-8 (no BOM) copy and prints a 1-line tip.
-  - Generates an accurate scope-aware commit message (or uses -CommitMessage), pulls with rebase, and pushes
-    non-interactively (GIT_TERMINAL_PROMPT=0) with exit-code verification.
+  Also links (via NTFS Directory Junctions, with folder-copy fallback) every skill in
+  %USERPROFILE%\.agent-templates\skills\* into:
+  1. Antigravity       : %USERPROFILE%\.gemini\config\skills\<skill>
+  2. Claude Code       : %USERPROFILE%\.claude\skills\<skill>
+  3. Codex             : %USERPROFILE%\.codex\skills\<skill>
+  4. OpenCode          : %USERPROFILE%\.config\opencode\skills\<skill>
+  5. Universal Agents  : %USERPROFILE%\.agents\skills\<skill>
 #>
 [CmdletBinding()]
 param(
@@ -55,6 +54,14 @@ $harnesses = [ordered]@{
     'Freebuff'        = (Join-Path $env:USERPROFILE '.AGENTS.md')
 }
 
+$skillRoots = [ordered]@{
+    'Antigravity' = (Join-Path $env:USERPROFILE '.gemini\config\skills')
+    'ClaudeCode'  = (Join-Path $env:USERPROFILE '.claude\skills')
+    'Codex'       = (Join-Path $env:USERPROFILE '.codex\skills')
+    'OpenCode'    = (Join-Path $env:USERPROFILE '.config\opencode\skills')
+    'AgentsStd'   = (Join-Path $env:USERPROFILE '.agents\skills')
+}
+
 function Get-TextHash([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) { return $null }
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
@@ -71,6 +78,47 @@ function Test-PointsToMaster([string]$Path, [string]$MasterFullPath) {
         return ($resolvedTarget -ieq $MasterFullPath)
     } catch {
         return $false
+    }
+}
+
+function Test-DirPointsToSource([string]$DestDir, [string]$SourceFullPath) {
+    if (-not (Test-Path -LiteralPath $DestDir)) { return $false }
+    $item = Get-Item -LiteralPath $DestDir -Force
+    if (($item.LinkType -ne 'Junction') -and ($item.LinkType -ne 'SymbolicLink')) { return $false }
+    $targets = @($item.Target)
+    if ($targets.Count -eq 0 -or -not $targets[0]) { return $false }
+    try {
+        $resolvedTarget = (Resolve-Path -LiteralPath $targets[0] -ErrorAction Stop).Path
+        return ($resolvedTarget -ieq $SourceFullPath)
+    } catch {
+        return $false
+    }
+}
+
+function Invoke-SafeDirOrLinkCleanup([string]$TargetDir) {
+    if (-not (Test-Path -LiteralPath $TargetDir)) { return }
+    $item = Get-Item -LiteralPath $TargetDir -Force
+    $isReparse = [bool]($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)
+    if ($isReparse) {
+        [System.IO.Directory]::Delete($item.FullName, $false)
+    } else {
+        Remove-Item -LiteralPath $item.FullName -Recurse -Force
+    }
+}
+
+function Invoke-SkillFolderCopy([string]$SourceDir, [string]$DestDir) {
+    if (-not (Test-Path -LiteralPath $DestDir)) {
+        New-Item -ItemType Directory -Path $DestDir -Force | Out-Null
+    }
+    $files = Get-ChildItem -LiteralPath $SourceDir -Recurse -File
+    foreach ($f in $files) {
+        $rel = $f.FullName.Substring($SourceDir.Length).TrimStart('\', '/')
+        $outPath = Join-Path $DestDir $rel
+        $outParent = Split-Path -Parent $outPath
+        if (-not (Test-Path -LiteralPath $outParent)) {
+            New-Item -ItemType Directory -Path $outParent -Force | Out-Null
+        }
+        Copy-Item -LiteralPath $f.FullName -Destination $outPath -Force
     }
 }
 
@@ -128,6 +176,8 @@ function Get-AutoCommitMessage([string[]]$StatusLines, [int]$RescuedCount) {
             'agents'
         } elseif ($norm -eq 'AUDITS.md' -or $norm -eq 'UIUX.md') {
             'audits'
+        } elseif ($norm.StartsWith('skills/')) {
+            'skills'
         } elseif ($norm.StartsWith('templates/')) {
             'templates'
         } elseif ($norm.StartsWith('.github/')) {
@@ -187,7 +237,7 @@ $masterContent = [System.IO.File]::ReadAllText($masterPath, [System.Text.Encodin
 $masterHash = Get-TextHash $masterPath
 $symlinkFallbackHit = $false
 
-# Step 2: Ensure every harness is symlinked to Master (or fall back cleanly to copy if unprivileged)
+# Step 2: Ensure every harness AGENTS.md is symlinked to Master (or fall back cleanly to copy)
 foreach ($entry in $harnesses.GetEnumerator()) {
     $hName = $entry.Key
     $hPath = $entry.Value
@@ -197,7 +247,7 @@ foreach ($entry in $harnesses.GetEnumerator()) {
     }
 
     if (-not $CopyOnly -and (Test-PointsToMaster $hPath $masterPath)) {
-        Write-Host "  = $hName is symlinked to Master." -ForegroundColor Gray
+        Write-Host "  = $hName AGENTS.md is symlinked to Master." -ForegroundColor Gray
         continue
     }
 
@@ -207,14 +257,13 @@ foreach ($entry in $harnesses.GetEnumerator()) {
                 Remove-Item -LiteralPath $hPath -Force
             }
             New-Item -ItemType SymbolicLink -Path $hPath -Target $masterPath -Force | Out-Null
-            Write-Host "  -> Linked $hName ($hPath -> Master)" -ForegroundColor Green
+            Write-Host "  -> Linked $hName AGENTS.md ($hPath -> Master)" -ForegroundColor Green
             continue
         } catch {
             $symlinkFallbackHit = $true
         }
     }
 
-    # Copy fallback (or explicit -CopyOnly mode)
     $currentHash = Get-TextHash $hPath
     if ($currentHash -ne $masterHash) {
         [System.IO.File]::WriteAllText($hPath, $masterContent, $utf8NoBom)
@@ -225,7 +274,47 @@ foreach ($entry in $harnesses.GetEnumerator()) {
 }
 
 if ($symlinkFallbackHit) {
-    Write-Host "[TIP] Symlink creation needs a one-time 'Run as Administrator' (or Windows Developer Mode). Used safe file copy instead." -ForegroundColor Yellow
+    Write-Host "[TIP] File symlink creation needs a one-time 'Run as Administrator' (or Windows Developer Mode). Used safe file copy instead." -ForegroundColor Yellow
+}
+
+# Step 2b: Sync companion skills into Antigravity + all skill-capable harnesses via NTFS Junctions (or safe copy)
+$skillsSourceRoot = Join-Path $TemplatesDir 'skills'
+$syncedSkillCount = 0
+if (Test-Path -LiteralPath $skillsSourceRoot -PathType Container) {
+    $skillDirs = @(Get-ChildItem -LiteralPath $skillsSourceRoot -Directory | Sort-Object Name)
+    $syncedSkillCount = $skillDirs.Count
+    foreach ($sRootEntry in $skillRoots.GetEnumerator()) {
+        $targetHarness = $sRootEntry.Key
+        $destRoot = $sRootEntry.Value
+        if (-not (Test-Path -LiteralPath $destRoot)) {
+            New-Item -ItemType Directory -Path $destRoot -Force | Out-Null
+        }
+        foreach ($sDir in $skillDirs) {
+            $srcFull = $sDir.FullName
+            $destSkillPath = Join-Path $destRoot $sDir.Name
+            if (-not $CopyOnly -and (Test-DirPointsToSource $destSkillPath $srcFull)) {
+                continue
+            }
+            if (-not $CopyOnly) {
+                try {
+                    if (Test-Path -LiteralPath $destSkillPath) {
+                        Invoke-SafeDirOrLinkCleanup -TargetDir $destSkillPath
+                    }
+                    New-Item -ItemType Junction -Path $destSkillPath -Target $srcFull -Force | Out-Null
+                    Write-Host "  -> Linked skill '$($sDir.Name)' into $targetHarness ($destSkillPath)" -ForegroundColor Green
+                    continue
+                } catch {
+                    Write-Host "  [WARN] Junction failed for $destSkillPath; falling back to directory copy." -ForegroundColor Yellow
+                }
+            }
+            if (Test-Path -LiteralPath $destSkillPath) {
+                Invoke-SafeDirOrLinkCleanup -TargetDir $destSkillPath
+            }
+            Invoke-SkillFolderCopy -SourceDir $srcFull -DestDir $destSkillPath
+            Write-Host "  -> Copied skill '$($sDir.Name)' into $targetHarness ($destSkillPath)" -ForegroundColor Yellow
+        }
+    }
+    Write-Host "  = Verified $syncedSkillCount skill(s) across $($skillRoots.Count) skill directories." -ForegroundColor Gray
 }
 
 # Step 3: Non-interactive Git commit, rebase, and push
@@ -248,4 +337,4 @@ if (-not $NoGitPush) {
     }
 }
 
-Write-Host "[DONE] All $($harnesses.Count) agent harnesses + Master are in sync!" -ForegroundColor Green
+Write-Host "[DONE] All $($harnesses.Count) agent harnesses + $syncedSkillCount companion skill(s) + Master are in sync!" -ForegroundColor Green

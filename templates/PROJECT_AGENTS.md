@@ -24,7 +24,7 @@
 * `.github/workflows/` — GitHub Actions CI/CD (`ci.yml` on push/PR with patch-ready failure report artifact; tag-triggered `release.yml` for `vX.Y.Z` builds).
 * `local-ci.ps1` — *(Top-Secret Local-Only repos only)* Local Windows verification runner saving patch-ready failure reports to `%USERPROFILE%\Downloads\`.
 * `src/` — Modular single-responsibility source files.
-* `docs/` — Interconnected Markdown suite (`PRODUCT.md`, `ARCHITECTURE.md`, `DECISIONS_AND_TRAPS.md`). Scan via `grep -A 1 "^### \[" docs/`.
+* `docs/` — Interconnected Markdown suite (`PRODUCT.md`, `ARCHITECTURE.md`, `DECISIONS_AND_TRAPS.md`). Scan dynamically via `grep -n -A 1 "^### \[" docs/` and read only matched line slices.
 * `preview/` — On-demand HTML/CSS/JS visual previews (e.g., `preview/theme-toggle.html`), created beside `docs/` only when requested.
 
 ## 4. Critical Trap Pointers (1-Line Warnings Only)
