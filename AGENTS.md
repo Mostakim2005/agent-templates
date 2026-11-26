@@ -96,3 +96,4 @@ Before **every** `git commit` (fixes, refactors, features, or architectural chan
 
 ## 8. Live User Preferences (Auto-Captured)
 *(All preferences up to 2026-11-26 have been consolidated into Sections 1–7. Append newly discovered preferences below.)*
+- [PREF: CI-Artifacts-For-Testing-And-Releases-For-Milestones | 2026-11-26 | Release Workflow] Always use CI APK/build artifacts for intermediate testing and save `vX.Y.Z` releases strictly for stable milestone bundles.
