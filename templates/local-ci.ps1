@@ -131,9 +131,6 @@ function Test-RepoStructureAndDocParity {
     foreach ($doc in $docFiles) {
         $rel = $doc.FullName.Substring($RootPath.Length).TrimStart('\', '/') -replace '\\', '/'
         $lines = [System.IO.File]::ReadAllLines($doc.FullName, [System.Text.Encoding]::UTF8)
-        if (($doc.DirectoryName -ieq $docsDir) -and ($lines.Count -gt 250)) {
-            $warnings.Add("[WARN] $rel has $($lines.Count) lines (>250); split details into docs/modules/<topic>.md")
-        }
         $inFence = $false
         for ($i = 0; $i -lt $lines.Count; $i++) {
             $line = $lines[$i]

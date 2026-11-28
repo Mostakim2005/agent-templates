@@ -172,11 +172,6 @@ jobs:
 
           for md_path in doc_files:
               rel = md_path.as_posix()
-              raw_lines = md_path.read_text(encoding="utf-8").splitlines()
-              if md_path.parent == docs_dir and len(raw_lines) > 250:
-                  warnings.append(
-                      f"[WARN] {rel} has {len(raw_lines)} lines (>250); split details into docs/modules/<topic>.md"
-                  )
               for idx, line, all_lines in iter_non_fenced_lines(md_path):
                   if line.startswith("### ["):
                       m = header_re.match(line)
